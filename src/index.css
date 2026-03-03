@@ -1,0 +1,98 @@
+@font-face {
+  font-family: 'Safiro';
+  src: url('./assets/safiro-medium-webfont.woff2') format('woff2'),
+  url('./assets/safiro-medium-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --dark-gray: #333;
+  --light-gray: #f0f0f0;
+  --text-light: rgba(255, 255, 255, 0.87);
+  --text-dark: #000000;
+  --background-dark: #000000;
+  --background-light: #ffffff;
+
+  /* Class Type Colors */
+  --color-lecture: #d32f2f;
+  --color-lab: #00a38b;
+  --color-seminar: #0288d1;
+
+  /* Card Colors */
+  --card-bg-default: #222222;
+  --card-text: #ffffff;
+
+  font-family: 'Safiro', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  color-scheme: light dark;
+}
+
+html, body {
+  margin: 0;
+  background-color: var(--background-light);
+  color: var(--text-dark);
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important; /* Webkit browsers */
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: var(--background-dark);
+    color: var(--text-light);
+  }
+}
+
+.fade-in {
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+.fade-in.visible {
+  opacity: 1;
+}
+
+@keyframes fadeInAnimation {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.gray-button {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-size: medium;
+  color: var(--text-dark);
+  border-radius: 20px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gray-button:hover {
+  background-color: #e0e0e0;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

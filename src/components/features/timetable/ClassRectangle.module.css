@@ -1,0 +1,54 @@
+.classRectangle {
+    position: absolute;
+    padding: 4px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+    color: white;
+    font-size: 0.8em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+    border-left: 4px solid rgba(0, 0, 0, 0.2);
+  }
+
+  .leftContent {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    font-size: 1.4em;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.1;
+    padding-left: 4px;
+  }
+
+  .classType {
+    font-size: 0.6em;
+    font-weight: normal;
+    opacity: 0.9;
+    text-transform: capitalize;
+  }
+
+  .rightContent {
+    font-size: 0.9em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .locationBlob {
+    background-color: white;
+    color: black;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.9em;
+    font-weight: bold;
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
+  }

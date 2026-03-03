@@ -1,0 +1,14 @@
+.typeBar {
+  margin-top: auto;
+  padding: 4px 0;
+  text-align: center;
+  font-size: 0.75em;
+  font-weight: bold;
+  width: 100%;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.typeLecture { background-color: var(--color-lecture); }
+.typeLab { background-color: var(--color-lab); }
+.typeSeminar { background-color: var(--color-seminar); }

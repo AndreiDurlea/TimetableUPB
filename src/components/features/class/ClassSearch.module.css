@@ -1,0 +1,17 @@
+.stickyContainer {
+    position: sticky;
+    top: 40px; /* Adjust based on navbar height */
+    z-index: 9;
+    background-color: rgba(10, 10, 10, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 10px 0;
+    margin-bottom: 10px;
+}
+
+.searchRow {
+    display: flex;
+    width: 100%;
+    gap: 15px;
+    margin-bottom: 10px;
+}

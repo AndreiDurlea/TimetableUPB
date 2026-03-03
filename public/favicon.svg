@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 83.33 83.33">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        fill: none;
+      }
+
+      .cls-3 {
+        clip-path: url(#clippath);
+      }
+    </style>
+    <clipPath id="clippath">
+      <path class="cls-2" d="M66.67,0H9.97C4.46,0,0,4.46,0,9.97v63.4c0,5.51,4.46,9.97,9.97,9.97h63.4c5.51,0,9.97-4.46,9.97-9.97V9.97c0-5.51-4.46-9.97-9.97-9.97h-6.7Z"/>
+    </clipPath>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g class="cls-3">
+      <g>
+        <g>
+          <rect x="-.62" y="-.62" width="16.92" height="16.92"/>
+          <g>
+            <rect x="16.29" y="-.62" width="16.92" height="16.92"/>
+            <rect x="-.62" y="16.29" width="16.92" height="16.92"/>
+          </g>
+          <g>
+            <rect x="33.21" y="-.62" width="16.92" height="16.92"/>
+            <rect x="16.29" y="16.29" width="16.92" height="16.92"/>
+            <rect x="-.62" y="33.21" width="16.92" height="16.92"/>
+          </g>
+          <g>
+            <rect x="33.21" y="16.29" width="16.92" height="16.92"/>
+            <rect x="16.29" y="33.21" width="16.92" height="16.92"/>
+            <rect x="-.62" y="50.12" width="16.92" height="16.92"/>
+            <rect x="50.12" y="-.62" width="16.92" height="16.92"/>
+          </g>
+          <g>
+            <rect x="33.21" y="33.21" width="16.92" height="16.92"/>
+            <rect x="16.29" y="50.12" width="16.92" height="16.92"/>
+            <rect x="50.12" y="16.29" width="16.92" height="16.92"/>
+            <rect x="-.62" y="67.04" width="16.92" height="16.92"/>
+            <rect x="67.04" y="-.62" width="16.92" height="16.92"/>
+          </g>
+          <g>
+            <rect x="33.21" y="50.12" width="16.92" height="16.92"/>
+            <rect x="50.12" y="33.21" width="16.92" height="16.92"/>
+            <rect x="16.29" y="67.04" width="16.92" height="16.92"/>
+            <rect x="67.04" y="16.29" width="16.92" height="16.92"/>
+          </g>
+          <g>
+            <rect x="50.12" y="50.12" width="16.92" height="16.92"/>
+            <rect x="33.21" y="67.04" width="16.92" height="16.92"/>
+            <rect x="67.04" y="33.21" width="16.92" height="16.92"/>
+          </g>
+          <g>
+            <rect x="50.12" y="67.04" width="16.92" height="16.92"/>
+            <rect x="67.04" y="50.12" width="16.92" height="16.92"/>
+          </g>
+          <rect x="67.04" y="67.04" width="16.92" height="16.92"/>
+        </g>
+        <g>
+          <rect class="cls-1" x="34.15" y="19.12" width="15.03" height="15.03"/>
+          <path class="cls-1" d="M49.18,19.12h1.5c7.47,0,13.53,6.06,13.53,13.53v1.5h-15.03v-15.03Z"/>
+          <rect class="cls-1" x="49.18" y="34.15" width="15.03" height="15.03"/>
+          <rect class="cls-1" x="34.15" y="49.18" width="15.03" height="15.03"/>
+          <path class="cls-1" d="M49.18,49.18h15.03v1.5c0,7.47-6.06,13.53-13.53,13.53h-1.5v-15.03Z"/>
+          <rect class="cls-1" x="19.12" y="19.12" width="15.03" height="15.03"/>
+          <rect class="cls-1" x="19.12" y="34.15" width="15.03" height="15.03"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

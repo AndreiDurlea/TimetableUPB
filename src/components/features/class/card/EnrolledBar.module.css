@@ -1,0 +1,11 @@
+.enrolledBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-bottom-right-radius: 10px;
+  overflow: hidden;
+  white-space: nowrap;
+}

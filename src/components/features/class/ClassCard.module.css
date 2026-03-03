@@ -1,0 +1,91 @@
+.classCard {
+  background-color: var(--card-bg-default);
+  color: var(--card-text);
+  border-radius: 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 160px;
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  position: relative;
+  cursor: pointer;
+  transition: border 0.2s;
+  border: 2px solid transparent;
+  overflow: hidden;
+  flex-grow: 0;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.enrolled {
+  /* border: 1px solid rgba(255, 255, 255, 0.5); */
+}
+
+.removed {
+    /* You can add specific styles for removed cards if needed */
+}
+
+.conflict {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cardContent {
+  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.conflictTooltip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #444;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.8em;
+  z-index: 100;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85em;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+.cardTextLeft {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
+}
+
+.cardTextRight {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.textHuge {
+  font-size: 1.8em;
+  font-weight: bold;
+}
+
+.textSmall {
+  font-size: 0.75em;
+  color: #ccc;
+}

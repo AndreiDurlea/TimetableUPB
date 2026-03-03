@@ -1,0 +1,30 @@
+.filterContainer {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    column-gap: 15px;
+    row-gap: 8px;
+}
+
+.facultyFilterContainer {
+    display: flex;
+    align-items: center;
+}
+
+.facultyFilterCheckbox {
+    margin-right: 8px;
+}
+
+.facultyFilterLabel {
+    font-size: 0.9em;
+}
+
+.typeFilterContainer {
+    font-size: 0.9em;
+}
+
+.filterOption:hover {
+    text-decoration: underline !important;
+}
