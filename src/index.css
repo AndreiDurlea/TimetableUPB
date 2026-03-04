@@ -6,6 +6,20 @@
   font-style: normal;
 }
 
+html, body {
+  width: 100vw;
+  max-width: 100%;
+  overflow-x: hidden;
+  background-color: #000000;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100%;
+  overflow-x: hidden;
+}
+
 :root {
   --dark-gray: #333;
   --light-gray: #f0f0f0;
