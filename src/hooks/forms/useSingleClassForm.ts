@@ -37,11 +37,14 @@ export const useSingleClassForm = (initialClassData: DetailedClass | null, onCla
       ].filter(Boolean);
       const hierarchyString = hierarchyParts.join('-');
 
-      const formData = {
+      const parsedDay = initialClassData.day_of_week ? parseInt(String(initialClassData.day_of_week), 10) : NaN;
+      const dayOfWeekValue = isNaN(parsedDay) ? '' : parsedDay;
+
+      const formData: FormState = {
         shorthand: initialClassData.shorthand || '',
         name: initialClassData.name || '',
         classType: (initialClassData.class_type as ClassType) || '',
-        dayOfWeek: initialClassData.day_of_week || '',
+        dayOfWeek: dayOfWeekValue,
         startTime: initialClassData.start_time?.substring(0, 5) || '08:00',
         endTime: initialClassData.end_time?.substring(0, 5) || '10:00',
         frequency: (initialClassData.frequency as Frequency) || 'weekly',
@@ -63,12 +66,18 @@ export const useSingleClassForm = (initialClassData: DetailedClass | null, onCla
       const [hours, minutes] = form.startTime.split(':').map(Number);
       const endDate = new Date();
       endDate.setHours(hours + 2, minutes, 0, 0);
-      setForm(prev => ({ ...prev, endTime: endDate.toTimeString().substring(0, 5) }));
+      const newEndTime = endDate.toTimeString().substring(0, 5);
+      setForm(prev => ({ ...prev, endTime: newEndTime }));
     }
   }, [form.startTime]);
 
   const handleChange = (field: keyof FormState, value: string | number) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    let processedValue: string | number = value;
+    if (field === 'dayOfWeek') {
+      const parsed = parseInt(String(value), 10);
+      processedValue = isNaN(parsed) ? '' : parsed;
+    }
+    setForm(prev => ({ ...prev, [field]: processedValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
