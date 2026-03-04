@@ -1,11 +1,11 @@
 import { useEffect, useCallback } from 'react';
 
 export const useWeekLabels = (
-    gridRef: React.RefObject<HTMLDivElement>,
-    containerRef: React.RefObject<HTMLDivElement>,
-    separatorRef: React.RefObject<HTMLDivElement>,
-    label1Ref: React.RefObject<HTMLDivElement>,
-    label2Ref: React.RefObject<HTMLDivElement>
+    gridRef: React.RefObject<HTMLDivElement | null>,
+    containerRef: React.RefObject<HTMLDivElement | null>,
+    separatorRef: React.RefObject<HTMLDivElement | null>,
+    label1Ref: React.RefObject<HTMLDivElement | null>,
+    label2Ref: React.RefObject<HTMLDivElement | null>
 ) => {
     const handleScroll = useCallback(() => {
         if (!gridRef.current || !containerRef.current || !separatorRef.current || !label1Ref.current || !label2Ref.current) return;
