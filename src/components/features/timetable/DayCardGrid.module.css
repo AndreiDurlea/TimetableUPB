@@ -1,0 +1,162 @@
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.container {
+    position: relative;
+    height: calc(100vh - 160px);
+    width: 100%;
+    opacity: 0; /* Start hidden */
+}
+
+.container.visible {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+.dayCardGrid {
+    display: flex;
+    align-items: center; /* Reverted to center to fix vertical alignment */
+    gap: 15px;
+    padding: 0 calc(50vw - 129.5px);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    height: 100%;
+    touch-action: pan-x; /* Prevents pinch-to-zoom on the grid */
+}
+
+.cardWrapper {
+    scroll-snap-align: center;
+    width: 259px;
+    flex-shrink: 0;
+}
+
+.dayCardGrid::-webkit-scrollbar {
+    display: none;
+}
+
+.dayCardGrid {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modalContent {
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-height: 90vh;
+    overflow-y: auto;
+    background-color: transparent; /* Removed white background */
+}
+
+.modalActions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    width: 100%;
+    justify-content: center;
+}
+
+.headerText {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #666;
+    font-size: 0.9em;
+    z-index: 5;
+    text-align: center;
+    width: 100%;
+}
+
+.clickableText {
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.clickableText:hover {
+    color: white;
+}
+
+.modalButton {
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    background-color: white;
+    width: auto;
+    min-width: 100px;
+    color: var(--text-dark);
+    font-family: 'Safiro', system-ui;
+    height: 42px;
+    box-sizing: border-box;
+    cursor: pointer;
+    font-size: medium;
+    flex: 1;
+    max-width: 200px;
+    transition: background-color 0.2s;
+}
+
+.modalButton:hover {
+    background-color: #f5f5f5;
+}
+
+.floatingLabel {
+    position: absolute;
+    bottom: 20px;
+    left: 0; /* Will be updated by JS */
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 20;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+.weekSeparator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 550px; /* Set fixed height to avoid stretching cards */
+    margin: 0;
+    position: relative;
+    scroll-snap-align: center;
+    z-index: 10;
+    min-width: 2px;
+}
+
+.separatorLine {
+    width: 2px;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 1px;
+}

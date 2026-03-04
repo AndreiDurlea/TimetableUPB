@@ -1,0 +1,41 @@
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 220px;
+}
+
+.formGroup label {
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin-left: 5px;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; /* Use a more standard font for UI elements */
+}
+
+.formField {
+  background-color: #333;
+  color: var(--text-light);
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 1em;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.formField:focus, .formField:focus-within {
+  outline: none;
+  border-color: var(--color-seminar);
+}
+
+.formField::placeholder {
+  color: #888;
+}
+
+.formField:disabled {
+  background-color: #2a2a2a;
+  color: #888;
+  cursor: not-allowed;
+}
