@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://AndreiDurlea.github.io/TimetableUPB",
+  "homepage": "https://orar.andreidurlea.com",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
