@@ -5,6 +5,7 @@ import ProtectedRoute from './components/features/generics/ProtectedRoute.tsx';
 import AddEntryPage from './pages/AddEntryPage';
 import SharePage from './pages/Share.tsx';
 import NotFoundPage from './pages/NotFound.tsx';
+import InstallPage from './pages/InstallPage.tsx';
 import './App.css';
 
 function App() {
@@ -16,6 +17,9 @@ function App() {
 
         {/* Route for sharing timetables */}
         <Route path="/share/:hierarchy" element={<SharePage />} />
+
+        {/* Route for installing the PWA */}
+        <Route path="/install" element={<InstallPage />} />
 
         {/* Route for Profile - requires auth */}
         <Route element={<ProtectedRoute requiresAuth={true} requiresProfileComplete={true} />}>
