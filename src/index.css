@@ -9,15 +9,19 @@
 html, body {
   width: 100vw;
   max-width: 100%;
+  min-height: 100dvh;
   overflow-x: hidden;
   background-color: #000000;
+  color-scheme: dark;
   margin: 0;
   padding: 0;
 }
 
 #root {
   width: 100%;
+  min-height: 100dvh;
   overflow-x: hidden;
+  position: relative;
 }
 
 :root {
