@@ -1,0 +1,43 @@
+.footer {
+    width: 100%;
+    padding: 20px;
+    margin-top: auto;
+    background-color: var(--background-dark);
+    color: #888;
+    font-size: 0.9em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.leftSection {
+    /* Default styles */
+}
+
+.rightSection {
+    display: flex;
+    gap: 20px;
+}
+
+.filterOption {
+    cursor: pointer;
+    color: #888;
+}
+
+.link {
+    color: #888;
+}
+
+@media (max-width: 768px) {
+    .footer {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .rightSection {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
