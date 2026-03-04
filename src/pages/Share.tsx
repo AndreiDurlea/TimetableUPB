@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import LoadingIndicator from '../components/ui/LoadingIndicator';
@@ -6,10 +6,17 @@ import styles from './Share.module.css';
 
 const SELECTION_STORAGE_KEY = 'profile_selection';
 
+type HierarchyData = {
+  subgroup_id: string;
+  faculty_id: string;
+  domain_id: string;
+  series_id: string;
+  group_id: string;
+};
+
 const SharePage = () => {
   const { hierarchy } = useParams<{ hierarchy: string }>();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const processHierarchy = async () => {
@@ -25,7 +32,7 @@ const SharePage = () => {
       }
 
       const [faculty, domain, series, groupSubgroup] = parts;
-      
+
       const groupMatch = groupSubgroup.match(/^(\d+)([a-zA-Z]+)$/);
       if (!groupMatch) {
         navigate('/404');
@@ -34,7 +41,7 @@ const SharePage = () => {
       const group = groupMatch[1];
       const subgroup = groupMatch[2];
 
-      const { data, error: rpcError } = await supabase.rpc('get_subgroup_id_from_hierarchy', {
+      const { data, error: rpcError } = await supabase.rpc('get_subgroup_id_from_hierarchy' as any, {
         p_faculty_shorthand: faculty,
         p_domain_name: domain,
         p_series_name: series,
@@ -42,13 +49,15 @@ const SharePage = () => {
         p_subgroup_name: subgroup
       });
 
-      if (rpcError || !data || data.length === 0 || !data[0].subgroup_id) {
+      const typedData = data as HierarchyData[];
+
+      if (rpcError || !typedData || typedData.length === 0 || !typedData[0].subgroup_id) {
         console.error('Error validating hierarchy:', rpcError);
         navigate('/404');
         return;
       }
 
-      const { subgroup_id, faculty_id, domain_id, series_id, group_id } = data[0];
+      const { subgroup_id, faculty_id, domain_id, series_id, group_id } = typedData[0];
 
       const selection = {
         subgroupId: subgroup_id,
@@ -63,22 +72,14 @@ const SharePage = () => {
       navigate('/');
     };
 
-    processHierarchy();
+    void processHierarchy();
   }, [hierarchy, navigate]);
 
-  if (error) {
-    return (
-      <div className={styles.container}>
-        <p className={styles.errorText}>{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.container}>
-      <LoadingIndicator />
-      <p className={styles.loadingText}>Loading shared timetable...</p>
-    </div>
+      <div className={styles.container}>
+        <LoadingIndicator />
+        <p className={styles.loadingText}>Loading shared timetable...</p>
+      </div>
   );
 };
 
