@@ -24,6 +24,7 @@ const DayCardGrid: React.FC = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [tempSubgroupId, setTempSubgroupId] = useState<string | null>(null);
+    const [isSelectionForced, setIsSelectionForced] = useState(false);
     
     const { classes, classesLoading, hierarchyString } = useTimetableData(tempSubgroupId);
     useWeekLabels(gridRef, containerRef, separatorRef, label1Ref, label2Ref);
@@ -50,15 +51,20 @@ const DayCardGrid: React.FC = () => {
         }
 
         if (user) {
-            localStorage.removeItem(SELECTION_STORAGE_KEY);
             setTempSubgroupId(null);
+            setShowModal(false);
+            setIsSelectionForced(false);
         } else {
             const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
-            if (savedSelectionRaw) {
-                const savedSelection = JSON.parse(savedSelectionRaw);
-                setTempSubgroupId(savedSelection.subgroupId || null);
+            const hasSelection = savedSelectionRaw && JSON.parse(savedSelectionRaw).subgroupId;
+
+            if (hasSelection) {
+                setTempSubgroupId(JSON.parse(savedSelectionRaw!).subgroupId);
+                setShowModal(false);
+                setIsSelectionForced(false);
             } else {
                 setShowModal(true);
+                setIsSelectionForced(true);
             }
         }
     }, [user, loading, navigate]);
@@ -216,7 +222,14 @@ const DayCardGrid: React.FC = () => {
             if (savedSelection.subgroupId) {
                 setTempSubgroupId(savedSelection.subgroupId);
                 setShowModal(false);
+                setIsSelectionForced(false);
             }
+        }
+    };
+
+    const handleModalClose = () => {
+        if (!isSelectionForced) {
+            setShowModal(false);
         }
     };
 
@@ -258,6 +271,17 @@ const DayCardGrid: React.FC = () => {
     const label1 = week1.length > 0 ? getWeekLabel(getSemesterWeek(week1[0])) : '';
     const label2 = week2.length > 0 ? getWeekLabel(getSemesterWeek(week2[0])) : '';
 
+    if (isSelectionForced && !tempSubgroupId) {
+        return (
+            <TimetableSelectionModal
+                show={true}
+                onClose={handleModalClose}
+                onSubmit={handleModalSubmit}
+                isUserLoggedIn={!!user}
+            />
+        );
+    }
+
     return (
         <>
             <TimetableHeader
@@ -270,7 +294,7 @@ const DayCardGrid: React.FC = () => {
 
             <TimetableSelectionModal
                 show={showModal}
-                onClose={() => setShowModal(false)}
+                onClose={handleModalClose}
                 onSubmit={handleModalSubmit}
                 isUserLoggedIn={!!user}
             />
