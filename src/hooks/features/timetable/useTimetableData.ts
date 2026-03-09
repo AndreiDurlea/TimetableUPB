@@ -3,6 +3,8 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../auth/useAuth';
 import type { Database } from '../../../lib/database.types';
 
+const SELECTION_STORAGE_KEY = 'profile_selection';
+
 type Class = Database['public']['Views']['detailed_classes']['Row'] & {
     shorthand: string | null;
     resolved_domain_id: string | null;
@@ -27,7 +29,24 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
         const fetchClasses = async () => {
             setClassesLoading(true);
             setHierarchyString('');
-            const targetSubgroupId = tempSubgroupId || profile?.subgroup_id;
+
+            let targetSubgroupId = tempSubgroupId;
+
+            // If user is not logged in and no tempSubgroupId is provided,
+            // try to get it from localStorage.
+            if (!user && !targetSubgroupId) {
+                const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+                if (savedSelectionRaw) {
+                    const savedSelection = JSON.parse(savedSelectionRaw);
+                    targetSubgroupId = savedSelection.subgroupId || null;
+                }
+            }
+
+            // If user is logged in, use their profile's subgroup_id
+            if (user && profile?.subgroup_id) {
+                targetSubgroupId = profile.subgroup_id;
+            }
+
 
             if (targetSubgroupId) {
                 const { data: relevantClasses, error } = await supabase.rpc('get_relevant_classes', {
