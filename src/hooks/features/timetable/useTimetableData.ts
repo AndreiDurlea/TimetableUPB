@@ -54,8 +54,15 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
                 });
 
                 if (error) {
-                    console.error('Error fetching classes:', error);
-                    setClasses([]);
+                    console.warn('Error fetching classes, falling back to local cache:', error);
+                    const cachedClasses = localStorage.getItem(`cached_classes_${targetSubgroupId}`) || localStorage.getItem('cached_classes_default');
+                    const cachedHierarchy = localStorage.getItem(`cached_hierarchy_${targetSubgroupId}`) || localStorage.getItem('cached_hierarchy_default');
+                    if (cachedClasses) {
+                        setClasses(JSON.parse(cachedClasses));
+                        if (cachedHierarchy) setHierarchyString(cachedHierarchy);
+                    } else {
+                        setClasses([]);
+                    }
                     setClassesLoading(false);
                     return;
                 }
@@ -90,9 +97,18 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
 
                     if (detailedError) {
                         console.error('Error fetching detailed classes:', detailedError);
-                        setClasses([]);
+                        const cachedClasses = localStorage.getItem(`cached_classes_${targetSubgroupId}`);
+                        if (cachedClasses) setClasses(JSON.parse(cachedClasses));
+                        else setClasses([]);
                     } else {
-                        setClasses(detailedClasses as Class[]);
+                        const classList = detailedClasses as Class[];
+                        setClasses(classList);
+                        try {
+                            localStorage.setItem(`cached_classes_${targetSubgroupId}`, JSON.stringify(classList));
+                            localStorage.setItem('cached_classes_default', JSON.stringify(classList));
+                        } catch {
+                            // ignore quota error
+                        }
                     }
                 }
 
@@ -113,6 +129,12 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
                         if (facultyShorthand && domainName && seriesName && groupName && subgroupName) {
                             const str = `${facultyShorthand}-${domainName}-${seriesName}-${groupName}${subgroupName}`;
                             setHierarchyString(str);
+                            try {
+                                localStorage.setItem(`cached_hierarchy_${targetSubgroupId}`, str);
+                                localStorage.setItem('cached_hierarchy_default', str);
+                            } catch {
+                                // ignore
+                            }
                         }
                     }
                 }
