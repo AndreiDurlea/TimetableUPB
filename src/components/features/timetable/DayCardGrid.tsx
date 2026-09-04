@@ -5,6 +5,7 @@ import styles from './DayCardGrid.module.css';
 import { useAuth } from '../../../hooks/auth/useAuth';
 import { useTimetableData } from '../../../hooks/features/timetable/useTimetableData';
 import { useWeekLabels } from '../../../hooks/features/timetable/useWeekLabels';
+import { getSemesterWeek, isEvenWeek, getWeekLabel } from '../../../utils/semesterUtils';
 import TimetableSelectionModal from './TimetableSelectionModal';
 import TimetableHeader from './TimetableHeader';
 
@@ -131,24 +132,7 @@ const DayCardGrid: React.FC = () => {
         }
     }, [classesLoading, days]);
 
-    const getSemesterWeek = (d: Date) => {
-        const start = new Date(2026, 1, 23);
-        const diffTime = d.getTime() - start.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays < 0) return 0;
-        return Math.floor(diffDays / 7) + 1;
-    };
 
-    const getWeekLabel = (weekNum: number) => {
-        if (weekNum >= 18) return "SUMMER BREAK";
-        if (weekNum >= 15) return "EXAM SESSION";
-        return `WEEK ${weekNum} (${weekNum % 2 === 0 ? 'even' : 'odd'})`;
-    };
-
-    const isEvenWeek = (date: Date) => {
-        const weekNum = getSemesterWeek(date);
-        return weekNum % 2 === 0;
-    };
 
     const handleScroll = useCallback(() => {
         if (!gridRef.current) return;
@@ -235,12 +219,10 @@ const DayCardGrid: React.FC = () => {
 
     const renderCards = (weekDays: Date[], startIndex: number) => {
         if (weekDays.length === 0) return null;
-        const weekNum = getSemesterWeek(weekDays[0]);
-        const isExamOrBreak = weekNum >= 15;
 
         return weekDays.map((day, i) => {
             const index = startIndex + i;
-            const dayClasses = isExamOrBreak ? [] : classes.filter(
+            const dayClasses = classes.filter(
                 (c) => {
                     if (c.day_of_week !== day.getDay()) return false;
                     const freq = c.frequency?.toLowerCase();
