@@ -28,7 +28,7 @@ const Footer: React.FC = () => {
   return (
     <footer className={styles.footer}>
       <div className={styles.leftSection}>
-        Made with the FreeTime framework by <a href="https://andreidurlea.com" target="_blank" rel="noopener noreferrer" className={styles.link}>Durlea Andrei</a>
+        Made by <a href="https://andreidurlea.com" target="_blank" rel="noopener noreferrer" className={styles.link}>Andrei Durlea</a>
       </div>
       <div className={styles.rightSection}>
         {user ? (
