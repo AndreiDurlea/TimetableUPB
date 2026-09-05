@@ -1,0 +1,41 @@
+name: Supabase Keep-Alive & Health Check
+
+on:
+  schedule:
+    # Runs every Sunday at 08:00 UTC (and every Wednesday to guarantee it never exceeds 7 days)
+    - cron: '0 8 * * 0,3'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab anytime
+
+jobs:
+  keepalive:
+    name: Ping Site and Supabase DB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Timetable Website
+        run: |
+          echo "Pinging timetable frontend..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://orar.andreidurlea.com || echo "000")
+          echo "Website HTTP Status: $STATUS"
+
+      - name: Query Supabase REST API (Keep Database Active)
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://tonigshvsqgyyzggqwjf.supabase.co' }}
+          SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 'sb_publishable_q9RwD1wcRqH8rTk5zwRxdA_Z4GNvs2r' }}
+        run: |
+          echo "Sending query to Supabase database to reset inactivity timer..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            "$SUPABASE_URL/rest/v1/faculties?select=id,shorthand&limit=1")
+          
+          BODY=$(echo "$RESPONSE" | sed -e '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d':' -f2)
+
+          echo "Supabase HTTP Status: $HTTP_STATUS"
+          echo "Supabase Sample Data: $BODY"
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "✓ Successfully reached Supabase. Inactivity timer reset!"
+          else
+            echo "Notice: Supabase returned HTTP $HTTP_STATUS (may still be restoring or unreachable)."
+          fi
