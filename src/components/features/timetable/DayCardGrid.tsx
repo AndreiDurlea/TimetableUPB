@@ -40,14 +40,23 @@ const DayCardGrid: React.FC = () => {
     useEffect(() => {
         if (loading) return;
 
+        let savedSubgroupId: string | null = null;
+        try {
+            const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+            if (savedSelectionRaw) {
+                const parsed = JSON.parse(savedSelectionRaw);
+                if (parsed && typeof parsed === 'object' && parsed.subgroupId) {
+                    savedSubgroupId = parsed.subgroupId;
+                }
+            }
+        } catch {
+            savedSubgroupId = null;
+        }
+
         const fromShare = sessionStorage.getItem('fromShare') === 'true';
         if (fromShare) {
             sessionStorage.removeItem('fromShare');
-            const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
-            if (savedSelectionRaw) {
-                const savedSelection = JSON.parse(savedSelectionRaw);
-                setTempSubgroupId(savedSelection.subgroupId || null);
-            }
+            setTempSubgroupId(savedSubgroupId);
             return;
         }
 
@@ -56,11 +65,8 @@ const DayCardGrid: React.FC = () => {
             setShowModal(false);
             setIsSelectionForced(false);
         } else {
-            const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
-            const hasSelection = savedSelectionRaw && JSON.parse(savedSelectionRaw).subgroupId;
-
-            if (hasSelection) {
-                setTempSubgroupId(JSON.parse(savedSelectionRaw!).subgroupId);
+            if (savedSubgroupId) {
+                setTempSubgroupId(savedSubgroupId);
                 setShowModal(false);
                 setIsSelectionForced(false);
             } else {
