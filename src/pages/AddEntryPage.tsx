@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AddClassForm from '../components/features/forms/AddClassForm.tsx';
 import Navbar from '../components/features/generics/Navbar';
 import Footer from '../components/features/generics/Footer';
+import FormSelect from '../components/ui/forms/fields/FormSelect.tsx';
 
 type EntryType = 'Class' | 'Teacher' | 'Building' | 'Room';
 
@@ -30,25 +31,26 @@ const AddEntryPage: React.FC = () => {
                 alignItems: 'center',
                 padding: '20px',
             }}>
-                <h2 style={{ fontSize: '1.5em', marginBottom: '20px', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    Add new
-                    <select
-                        id="entryType"
+                <div style={{ textAlign: 'center', marginBottom: '24px', maxWidth: '600px' }}>
+                    <h2 style={{ fontSize: '1.6em', marginBottom: '8px', color: 'var(--text-light)', fontWeight: 600 }}>
+                        Add New Entry
+                    </h2>
+                    <p style={{ color: '#888', fontSize: '0.9em' }}>
+                        Create or update timetable schedule entries in the database.
+                    </p>
+                </div>
+
+                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                    <FormSelect
+                        label="Entry Type"
                         value={selectedFormType}
-                        onChange={(e) => setSelectedFormType(e.target.value as EntryType)}
-                        className="form-group-select"
-                        style={{
-                            fontSize: '0.8em',
-                            fontWeight: 'normal',
-                            color: 'var(--text-dark)',
-                            backgroundColor: 'white',
-                            padding: '4px 8px'
-                        }}
-                    >
-                        <option value="Class">Class</option>
-                    </select>
-                    entry
-                </h2>
+                        onChange={(val) => setSelectedFormType(val as EntryType)}
+                        options={[
+                            { id: 'Class', label: 'Class' }
+                        ]}
+                        placeholder="Select Entry Type"
+                    />
+                </div>
 
                 <div style={{ width: '100%', maxWidth: '1200px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     {selectedFormType === 'Class' && (
