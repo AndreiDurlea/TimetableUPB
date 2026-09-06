@@ -5,13 +5,15 @@
   transform: translateX(-50%);
   background-color: #d32f2f; /* Red to match the button */
   color: white;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border-radius: 8px;
   font-size: 0.9em;
+  font-weight: 500;
   z-index: 1000;
   max-width: 90%;
+  width: max-content;
   text-align: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
   pointer-events: none;
@@ -20,4 +22,23 @@
 .visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+@keyframes shake-toast {
+  10%, 90% {
+    transform: translate3d(calc(-50% - 2px), 0, 0);
+  }
+  20%, 80% {
+    transform: translate3d(calc(-50% + 3px), 0, 0);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(calc(-50% - 5px), 0, 0);
+  }
+  40%, 60% {
+    transform: translate3d(calc(-50% + 5px), 0, 0);
+  }
+}
+
+.shake {
+  animation: shake-toast 0.5s cubic-bezier(.36, .07, .19, .97) both;
 }
