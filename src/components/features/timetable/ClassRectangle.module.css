@@ -1,6 +1,6 @@
 .classRectangle {
     position: absolute;
-    padding: 4px;
+    padding: 4px 8px;
     border-radius: 12px;
     box-sizing: border-box;
     overflow: hidden;
@@ -9,8 +9,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 4px;
-    border-left: 4px solid rgba(0, 0, 0, 0.2);
+    gap: 6px;
   }
 
   .leftContent {
@@ -25,7 +24,6 @@
     flex-direction: column;
     justify-content: center;
     line-height: 1.1;
-    padding-left: 4px;
   }
 
   .classType {
