@@ -49,7 +49,6 @@ const ClassRectangle: React.FC<ClassRectangleProps> = ({ cls, style }) => {
           style={{
             ...style,
             backgroundColor,
-            borderLeftColor: baseColor
           }}
       >
         <div className={styles.leftContent}>
