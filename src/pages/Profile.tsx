@@ -9,13 +9,10 @@ const Profile: React.FC = () => {
   const [showClassSearch, setShowClassSearch] = useState(false);
 
   useEffect(() => {
-    console.log('[Profile.tsx] Component mounted.');
     const timer1 = setTimeout(() => {
-      console.log('[Profile.tsx] Showing ProfileForm.');
       setShowProfileForm(true);
     }, 100);
     const timer2 = setTimeout(() => {
-      console.log('[Profile.tsx] Showing ClassSearch.');
       setShowClassSearch(true);
     }, 1000);
     return () => {

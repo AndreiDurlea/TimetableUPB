@@ -48,7 +48,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
   const isButtonOnScreen = useOnScreen(buttonRef);
 
   const isFormComplete = !!selection.subgroupId;
-  const isDangerousSave = conflictingManualClasses.length > 0;
+  const isDangerousSave = isDirty && isFormComplete && conflictingManualClasses.length > 0;
 
   const getClassText = (count: number) => `${count} class${count === 1 ? '' : 'es'}`;
 
@@ -141,13 +141,17 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
                     disabled={!isDirty || !isFormComplete}
                     className={`gray-button ${styles.saveButton}`}
                     style={{
-                      backgroundColor: isDangerousSave ? '#d32f2f' : ((isDirty && isFormComplete) ? 'white' : '#f0f0f0'),
-                      color: isDangerousSave ? 'white' : ((isDirty && isFormComplete) ? 'black' : '#ccc'),
-                      border: `1px solid ${isDangerousSave ? '#d32f2f' : ((isDirty && isFormComplete) ? 'black' : '#ccc')}`,
+                      backgroundColor: (isDirty && isFormComplete)
+                        ? (isDangerousSave ? '#d32f2f' : 'white')
+                        : '#1c1c1e',
+                      color: (isDirty && isFormComplete)
+                        ? (isDangerousSave ? 'white' : 'black')
+                        : '#555555',
+                      border: `1px solid ${(isDirty && isFormComplete) ? (isDangerousSave ? '#d32f2f' : 'white') : '#2c2c2e'}`,
                       cursor: (isDirty && isFormComplete) ? 'pointer' : 'default',
                     }}
                 >
-                  <WarningIcon />
+                  {isDangerousSave && <WarningIcon />}
                   Save edits
                 </button>
               </div>

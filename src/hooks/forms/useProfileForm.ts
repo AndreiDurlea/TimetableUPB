@@ -61,6 +61,9 @@ export const useProfileForm = (isProfilePage: boolean) => {
   const [persistedRemovedCount, setPersistedRemovedCount] = useState<number>(0);
 
   const [selection, setSelection] = useState<Selection>(() => {
+    if (isProfilePage) {
+      return DEFAULT_SELECTION;
+    }
     const saved = localStorage.getItem(SELECTION_STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_SELECTION;
   });
@@ -114,6 +117,10 @@ export const useProfileForm = (isProfilePage: boolean) => {
 
   useEffect(() => {
     if (isProfilePage) {
+      if (!originalSelection.subgroupId) {
+        setIsDirty(false);
+        return;
+      }
       const isChanged = JSON.stringify(selection) !== JSON.stringify(originalSelection);
       setIsDirty(isChanged);
     }
@@ -159,6 +166,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
   }, [user, refreshTrigger]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!isDirty || !selection.subgroupId) {
       setConflictingManualClasses([]);
       setPersistedManualCount(addedClassCount);
@@ -170,29 +179,29 @@ export const useProfileForm = (isProfilePage: boolean) => {
       if (!user) return;
 
       const { data: newDefaultClasses, error: defaultError } = await supabase.rpc('get_relevant_classes', { p_subgroup_id: selection.subgroupId });
-      if (defaultError) {
-        console.error("Error fetching new default classes:", defaultError);
+      if (defaultError || cancelled) {
+        if (defaultError) console.error("Error fetching new default classes:", defaultError);
         return;
       }
       const newDefaultClassIds = (newDefaultClasses as Class[]).map((c: Class) => c.id);
 
       const { data: userClassRelations, error: userClassesError } = await supabase.from('user_classes').select('class_id').eq('user_id', user.id);
-      if (userClassesError) {
-        console.error("Error fetching user classes:", userClassesError);
+      if (userClassesError || cancelled) {
+        if (userClassesError) console.error("Error fetching user classes:", userClassesError);
         return;
       }
       const manualClassIds = userClassRelations.map(uc => uc.class_id);
 
       const { data: userRemovedRelations, error: userRemovedError } = await supabase.from('user_removed_classes').select('class_id').eq('user_id', user.id);
-      if (userRemovedError) {
-        console.error("Error fetching user removed classes:", userRemovedError);
+      if (userRemovedError || cancelled) {
+        if (userRemovedError) console.error("Error fetching user removed classes:", userRemovedError);
         return;
       }
       const removedClassIds = userRemovedRelations.map(ur => ur.class_id);
 
       const { data: manualClasses, error: manualClassesDataError } = await supabase.from('classes').select('*').in('id', manualClassIds);
-      if (manualClassesDataError) {
-        console.error("Error fetching manual class data:", manualClassesDataError);
+      if (manualClassesDataError || cancelled) {
+        if (manualClassesDataError) console.error("Error fetching manual class data:", manualClassesDataError);
         return;
       }
 
@@ -210,16 +219,23 @@ export const useProfileForm = (isProfilePage: boolean) => {
           }
         }
       }
-      setConflictingManualClasses(conflicts);
 
-      const newPersistedManual = manualClassIds.filter(id => !newDefaultClassIds.includes(id) && !conflicts.some(c => c.id === id));
-      setPersistedManualCount(newPersistedManual.length);
+      if (!cancelled) {
+        setConflictingManualClasses(conflicts);
 
-      const newPersistedRemoved = removedClassIds.filter(id => newDefaultClassIds.includes(id));
-      setPersistedRemovedCount(newPersistedRemoved.length);
+        const newPersistedManual = manualClassIds.filter(id => !newDefaultClassIds.includes(id) && !conflicts.some(c => c.id === id));
+        setPersistedManualCount(newPersistedManual.length);
+
+        const newPersistedRemoved = removedClassIds.filter(id => newDefaultClassIds.includes(id));
+        setPersistedRemovedCount(newPersistedRemoved.length);
+      }
     };
 
     calculateChanges();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selection, isDirty, user, addedClassCount, removedClassCount]);
 
   const save = useCallback(async () => {
