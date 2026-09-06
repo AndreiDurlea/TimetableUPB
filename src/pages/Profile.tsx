@@ -3,6 +3,7 @@ import ProfileForm from '../components/features/forms/ProfileForm.tsx';
 import ClassSearch from '../components/features/class/ClassSearch.tsx';
 import Navbar from '../components/features/generics/Navbar';
 import Footer from '../components/features/generics/Footer';
+import JumpNav from '../components/ui/JumpNav';
 
 const Profile: React.FC = () => {
   const [showProfileForm, setShowProfileForm] = useState(false);
@@ -54,6 +55,7 @@ const Profile: React.FC = () => {
         </div>
       </main>
       <Footer />
+      <JumpNav />
     </div>
   );
 };

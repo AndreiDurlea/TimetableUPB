@@ -1,0 +1,77 @@
+.jumpToast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translate(-50%, 20px);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 950;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.jumpToast.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.jumpButton {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.82em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.jumpButton:hover:not(:disabled) {
+  background-color: #f2f2f2;
+  transform: translateY(-1px);
+}
+
+.jumpButton:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.jumpButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.arrowIcon {
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .jumpToast {
+    bottom: 16px;
+    padding: 5px 6px;
+    gap: 6px;
+  }
+
+  .jumpButton {
+    padding: 6px 11px;
+    font-size: 0.78em;
+    gap: 5px;
+  }
+}
