@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import styles from './FloatingWarning.module.css';
-import ShakingWrapper from './ShakingWrapper';
 
 interface FloatingWarningProps {
   show: boolean;
@@ -11,17 +10,24 @@ const FloatingWarning: React.FC<FloatingWarningProps> = ({ show, message }) => {
   const [shouldShake, setShouldShake] = useState(false);
 
   useEffect(() => {
-    if (show) {
+    if (show && message) {
       setShouldShake(true);
+      const timer = setTimeout(() => {
+        setShouldShake(false);
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [show]);
+  }, [show, message]);
+
+  if (!message) return null;
 
   return (
-    <ShakingWrapper shake={shouldShake} onAnimationEnd={() => setShouldShake(false)}>
-      <div className={`${styles.floatingWarning} ${show ? styles.visible : ''}`}>
-        {message}
-      </div>
-    </ShakingWrapper>
+    <div
+      className={`${styles.floatingWarning} ${show ? styles.visible : ''} ${shouldShake ? styles.shake : ''}`}
+      onAnimationEnd={() => setShouldShake(false)}
+    >
+      {message}
+    </div>
   );
 };
 
