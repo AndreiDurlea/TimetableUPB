@@ -1,6 +1,6 @@
 .floatingWarning {
   position: fixed;
-  bottom: 20px;
+  bottom: 76px;
   left: 50%;
   transform: translateX(-50%);
   background-color: #d32f2f; /* Red to match the button */
