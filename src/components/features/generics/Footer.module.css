@@ -1,10 +1,10 @@
 .footer {
     width: 100%;
-    padding: 20px;
+    padding: 20px 24px;
     margin-top: auto;
     background-color: var(--background-dark);
-    color: #888;
-    font-size: 0.9em;
+    color: #777;
+    font-size: 0.85em;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -17,27 +17,43 @@
 
 .rightSection {
     display: flex;
-    gap: 20px;
+    align-items: center;
+    gap: 16px;
 }
 
 .filterOption {
     cursor: pointer;
-    color: #888;
+    color: #777;
+    transition: color 0.2s ease;
+}
+
+.filterOption:hover {
+    color: #bbb;
 }
 
 .link {
-    color: #888;
+    color: #777;
+    transition: color 0.2s ease;
+}
+
+.link:hover {
+    color: #bbb;
 }
 
 @media (max-width: 768px) {
     .footer {
         flex-direction: column;
         text-align: center;
-        gap: 10px;
+        gap: 4px;
+        font-size: 0.74em;
+        padding: 8px 16px calc(36px + env(safe-area-inset-bottom, 0px)) 16px;
     }
 
     .rightSection {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
         gap: 10px;
     }
 }
