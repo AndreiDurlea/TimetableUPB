@@ -1,12 +1,18 @@
 .stickyContainer {
     position: sticky;
-    top: 40px; /* Adjust based on navbar height */
-    z-index: 9;
-    background-color: rgba(10, 10, 10, 0.75);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 10px 0;
-    margin-bottom: 10px;
+    top: 54px; /* Perfectly aligned below 54px sticky navbar */
+    z-index: 100;
+    background-color: var(--navbar-bg, rgba(10, 10, 10, 0.85));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 14px 0 10px 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+:global([data-theme="light"]) .stickyContainer {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .searchRow {

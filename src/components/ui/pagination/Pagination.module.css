@@ -1,0 +1,82 @@
+.paginationContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.infoText {
+  font-size: 0.88em;
+  color: var(--text-muted, #888888);
+}
+
+.controlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pageButton {
+  background: var(--card-bg-default, #18181b);
+  color: var(--text-color, #ffffff);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.88em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.pageButton:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.pageButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.activePage {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 700;
+}
+
+:global([data-theme="light"]) .activePage {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
+:global([data-theme="light"]) .pageButton {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+:global([data-theme="light"]) .pageButton:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.ellipsis {
+  color: var(--text-muted, #71717a);
+  padding: 0 4px;
+  font-weight: 600;
+}
