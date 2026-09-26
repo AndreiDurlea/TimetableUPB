@@ -11,9 +11,9 @@ html, body {
   max-width: 100%;
   min-height: 100dvh;
   overflow-x: hidden;
-  background-color: #000000 !important;
-  color: var(--text-light) !important;
-  color-scheme: dark !important;
+  background-color: var(--background-color, #000000) !important;
+  color: var(--text-color, var(--text-light)) !important;
+  color-scheme: var(--color-scheme, dark) !important;
   margin: 0;
   padding: 0;
   scrollbar-width: none !important; /* Firefox */
@@ -30,18 +30,20 @@ html, body {
   min-height: 100dvh;
   overflow-x: hidden;
   position: relative;
-  background-color: #000000;
+  background-color: var(--background-color, #000000);
 }
 
 :root {
   --dark-gray: #333;
   --light-gray: #f0f0f0;
+  --text-color: rgba(255, 255, 255, 0.87);
   --text-light: rgba(255, 255, 255, 0.87);
   --text-dark: #000000;
   --text-light-secondary: rgba(255, 255, 255, 0.6);
   --background-dark: #000000;
   --background-light: #000000;
   --background-color: #000000;
+  --navbar-bg: rgba(10, 10, 10, 0.75);
   --primary-accent: #ffffff;
   --error-color: #d32f2f;
 
@@ -53,6 +55,7 @@ html, body {
   /* Card Colors */
   --card-bg-default: #222222;
   --card-text: #ffffff;
+  --color-scheme: dark;
 
   font-family: 'Safiro', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -65,8 +68,21 @@ html, body {
   color-scheme: dark;
 }
 
+[data-theme="light"] {
+  --background-color: #f7f7f8;
+  --text-color: #111827;
+  --text-light: #111827;
+  --text-dark: #111827;
+  --text-light-secondary: rgba(0, 0, 0, 0.6);
+  --primary-accent: #111827;
+  --navbar-bg: rgba(247, 247, 248, 0.85);
+  --card-bg-default: #ffffff;
+  --card-text: #111827;
+  --color-scheme: light;
+}
+
 .bg-black {
-  background-color: #000000 !important;
+  background-color: var(--background-color, #000000) !important;
 }
 
 html::-webkit-scrollbar,

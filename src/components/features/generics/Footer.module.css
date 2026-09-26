@@ -2,7 +2,7 @@
     width: 100%;
     padding: 20px 24px;
     margin-top: auto;
-    background-color: var(--background-dark);
+    background-color: var(--background-color);
     color: #777;
     font-size: 0.85em;
     display: flex;
@@ -28,7 +28,11 @@
 }
 
 .filterOption:hover {
-    color: #bbb;
+    color: #555;
+}
+
+[data-theme="light"] .filterOption:hover {
+    color: #333;
 }
 
 .link {
@@ -37,7 +41,11 @@
 }
 
 .link:hover {
-    color: #bbb;
+    color: #555;
+}
+
+[data-theme="light"] .link:hover {
+    color: #333;
 }
 
 @media (max-width: 768px) {

@@ -11,6 +11,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  padding-top: 60px;
+  box-sizing: border-box;
+}
+
+[data-theme="light"] .overlay {
+  background-color: rgba(247, 247, 248, 0.75);
 }
 
 .modalContent {

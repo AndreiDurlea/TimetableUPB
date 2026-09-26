@@ -56,6 +56,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
   const [originalDefaultClassCount, setOriginalDefaultClassCount] = useState<number>(0);
   const [addedClassCount, setAddedClassCount] = useState<number>(0);
   const [removedClassCount, setRemovedClassCount] = useState<number>(0);
+  const [enrolledClassCount, setEnrolledClassCount] = useState<number>(0);
+  const [dirtyEnrolledCount, setDirtyEnrolledCount] = useState<number>(0);
   const [conflictingManualClasses, setConflictingManualClasses] = useState<Class[]>([]);
   const [persistedManualCount, setPersistedManualCount] = useState<number>(0);
   const [persistedRemovedCount, setPersistedRemovedCount] = useState<number>(0);
@@ -141,29 +143,43 @@ export const useProfileForm = (isProfilePage: boolean) => {
   useEffect(() => {
     if (!originalSelection.subgroupId) {
       setOriginalDefaultClassCount(0);
-      return;
-    }
-    const fetchOriginalCount = async () => {
-      const { count } = await supabase.rpc('get_relevant_classes', { p_subgroup_id: originalSelection.subgroupId }, { count: 'exact' });
-      if (count !== null) setOriginalDefaultClassCount(count);
-    };
-    fetchOriginalCount();
-  }, [originalSelection.subgroupId]);
-
-  useEffect(() => {
-    if (!user) {
+      setEnrolledClassCount(0);
       setAddedClassCount(0);
       setRemovedClassCount(0);
       return;
     }
-    const fetchCounts = async () => {
-      const { count: added } = await supabase.from('user_classes').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
-      const { count: removed } = await supabase.from('user_removed_classes').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
-      if (added !== null) setAddedClassCount(added);
-      if (removed !== null) setRemovedClassCount(removed);
+
+    const fetchAccurateCounts = async () => {
+      const { data: defaultClassesData } = await supabase.rpc('get_relevant_classes', { p_subgroup_id: originalSelection.subgroupId });
+      const defaultList = (defaultClassesData as Class[]) || [];
+      const defaultIds = new Set(defaultList.map(c => c.id));
+      setOriginalDefaultClassCount(defaultList.length);
+
+      if (!user) {
+        setAddedClassCount(0);
+        setRemovedClassCount(0);
+        setEnrolledClassCount(defaultList.length);
+        return;
+      }
+
+      const { data: manualData } = await supabase.from('user_classes').select('class_id').eq('user_id', user.id);
+      const { data: removedData } = await supabase.from('user_removed_classes').select('class_id').eq('user_id', user.id);
+
+      const manualIds = (manualData || []).map(r => r.class_id).filter((id): id is string => Boolean(id));
+      const removedIds = (removedData || []).map(r => r.class_id).filter((id): id is string => Boolean(id));
+
+      const actualRemoved = removedIds.filter(id => defaultIds.has(id));
+      const actualAdded = manualIds.filter(id => !defaultIds.has(id));
+
+      setRemovedClassCount(actualRemoved.length);
+      setAddedClassCount(actualAdded.length);
+
+      const total = (defaultList.length - actualRemoved.length) + actualAdded.length;
+      setEnrolledClassCount(total);
     };
-    fetchCounts();
-  }, [user, refreshTrigger]);
+
+    void fetchAccurateCounts();
+  }, [originalSelection.subgroupId, user, refreshTrigger]);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,6 +188,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
       setConflictingManualClasses([]);
       setPersistedManualCount(addedClassCount);
       setPersistedRemovedCount(removedClassCount);
+      setDirtyEnrolledCount(enrolledClassCount);
       return;
     }
 
@@ -228,6 +245,9 @@ export const useProfileForm = (isProfilePage: boolean) => {
 
         const newPersistedRemoved = removedClassIds.filter(id => newDefaultClassIds.includes(id));
         setPersistedRemovedCount(newPersistedRemoved.length);
+
+        const dirtyTotal = (newDefaultClassIds.length - newPersistedRemoved.length) + newPersistedManual.length;
+        setDirtyEnrolledCount(dirtyTotal);
       }
     };
 
@@ -298,14 +318,14 @@ export const useProfileForm = (isProfilePage: boolean) => {
 
   useEffect(() => {
     supabase.from('faculties').select('*').then(({ data }) => {
-      if (data) setOptions(prev => ({ ...prev, faculties: data.sort((a, b) => a.shorthand.localeCompare(b.shorthand)) }));
+      if (Array.isArray(data)) setOptions(prev => ({ ...prev, faculties: [...data].sort((a, b) => (a.shorthand || '').localeCompare(b.shorthand || '')) }));
     });
   }, []);
 
   useEffect(() => {
     if (selection.facultyId) {
       supabase.from('domains').select('*').eq('faculty_id', selection.facultyId).then(({ data }) => {
-        if (data) setOptions(prev => ({ ...prev, domains: data.sort((a, b) => a.name.localeCompare(b.name)) }));
+        if (Array.isArray(data)) setOptions(prev => ({ ...prev, domains: [...data].sort((a, b) => (a.name || '').localeCompare(b.name || '')) }));
       });
     } else {
       setOptions(prev => ({ ...prev, domains: [], series: [], groups: [], subgroups: [] }));
@@ -315,7 +335,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
   useEffect(() => {
     if (selection.domainId) {
       supabase.from('series').select('*').eq('domain_id', selection.domainId).then(({ data }) => {
-        if (data) setOptions(prev => ({ ...prev, series: data.sort((a, b) => a.name.localeCompare(b.name)) }));
+        if (Array.isArray(data)) setOptions(prev => ({ ...prev, series: [...data].sort((a, b) => (a.name || '').localeCompare(b.name || '')) }));
       });
     } else {
       setOptions(prev => ({ ...prev, series: [], groups: [], subgroups: [] }));
@@ -325,7 +345,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
   useEffect(() => {
     if (selection.seriesId) {
       supabase.from('groups').select('*').eq('series_id', selection.seriesId).then(({ data }) => {
-        if (data) setOptions(prev => ({ ...prev, groups: data.sort((a, b) => a.name.localeCompare(b.name)) }));
+        if (Array.isArray(data)) setOptions(prev => ({ ...prev, groups: [...data].sort((a, b) => (a.name || '').localeCompare(b.name || '')) }));
       });
     } else {
       setOptions(prev => ({ ...prev, groups: [], subgroups: [] }));
@@ -335,7 +355,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
   useEffect(() => {
     if (selection.groupId) {
       supabase.from('subgroups').select('*').eq('group_id', selection.groupId).then(({ data }) => {
-        if (data) setOptions(prev => ({ ...prev, subgroups: data.sort((a, b) => a.name.localeCompare(b.name)) }));
+        if (Array.isArray(data)) setOptions(prev => ({ ...prev, subgroups: [...data].sort((a, b) => (a.name || '').localeCompare(b.name || '')) }));
       });
     } else {
       setOptions(prev => ({ ...prev, subgroups: [] }));
@@ -385,6 +405,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
     originalDefaultClassCount,
     addedClassCount,
     removedClassCount,
+    enrolledClassCount,
+    dirtyEnrolledCount,
     conflictingManualClasses,
     persistedManualCount,
     persistedRemovedCount,

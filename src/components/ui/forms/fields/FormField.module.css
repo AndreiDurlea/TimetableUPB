@@ -9,7 +9,7 @@
   font-size: 0.9em;
   color: var(--text-light);
   margin-left: 5px;
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; /* Use a more standard font for UI elements */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 .formField {
@@ -23,6 +23,12 @@
   width: 100%;
   box-sizing: border-box;
   transition: border-color 0.2s ease-in-out;
+}
+
+[data-theme="light"] .formField {
+  background-color: #ffffff;
+  color: #111827;
+  border-color: #d1d5db;
 }
 
 .formField:focus, .formField:focus-within {
@@ -39,3 +45,8 @@
   color: #888;
   cursor: not-allowed;
 }
+
+[data-theme="light"] .formField:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+}
