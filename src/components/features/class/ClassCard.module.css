@@ -57,6 +57,11 @@
   pointer-events: none;
 }
 
+[data-theme="light"] .conflictTooltip {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
 .cardRow {
   display: flex;
   justify-content: space-between;
@@ -89,3 +94,8 @@
   font-size: 0.75em;
   color: #ccc;
 }
+
+[data-theme="light"] .textSmall {
+  color: #6b7280;
+}
+

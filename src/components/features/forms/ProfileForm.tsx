@@ -38,6 +38,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
     originalDefaultClassCount,
     addedClassCount,
     removedClassCount,
+    enrolledClassCount,
+    dirtyEnrolledCount,
     conflictingManualClasses,
     persistedManualCount,
     persistedRemovedCount,
@@ -70,6 +72,16 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
           return getFieldStatus(field).isChanged;
       }
       return !!selection[field];
+  };
+
+  const getSaveButtonClass = () => {
+    if (!isDirty || !isFormComplete) {
+      return styles.saveButtonDisabled;
+    }
+    if (isDangerousSave) {
+      return styles.saveButtonDangerous;
+    }
+    return styles.saveButtonActive;
   };
 
   return (
@@ -139,17 +151,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
                     ref={buttonRef}
                     type="submit"
                     disabled={!isDirty || !isFormComplete}
-                    className={`gray-button ${styles.saveButton}`}
-                    style={{
-                      backgroundColor: (isDirty && isFormComplete)
-                        ? (isDangerousSave ? '#d32f2f' : 'white')
-                        : '#1c1c1e',
-                      color: (isDirty && isFormComplete)
-                        ? (isDangerousSave ? 'white' : 'black')
-                        : '#555555',
-                      border: `1px solid ${(isDirty && isFormComplete) ? (isDangerousSave ? '#d32f2f' : 'white') : '#2c2c2e'}`,
-                      cursor: (isDirty && isFormComplete) ? 'pointer' : 'default',
-                    }}
+                    className={`${styles.saveButton} ${getSaveButtonClass()}`}
                 >
                   {isDangerousSave && <WarningIcon />}
                   Save edits
@@ -166,29 +168,45 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
             ) : (
                 isProfilePage && selection.subgroupId && (
                     <span className={styles.statusContent}>
-                        {getClassText(originalDefaultClassCount)}
-                        {removedClassCount > 0 && (
-                            <span className={styles.removed}>
-                                -{removedClassCount} removed
-                            </span>
-                        )}
-                        {addedClassCount > 0 && (
-                            <span className={styles.added}>
-                                +{addedClassCount} added
+                        <span className={styles.enrolledHighlight}>
+                            {getClassText(enrolledClassCount)} enrolled
+                        </span>
+                        {(removedClassCount > 0 || addedClassCount > 0) && (
+                            <span className={styles.breakdown}>
+                                <span>&nbsp;({originalDefaultClassCount} default,</span>
+                                {removedClassCount > 0 && (
+                                    <span className={styles.removed}>
+                                        -{removedClassCount} removed{addedClassCount > 0 ? ',' : ''}
+                                    </span>
+                                )}
+                                {addedClassCount > 0 && (
+                                    <span className={styles.added}>
+                                        +{addedClassCount} added
+                                    </span>
+                                )}
+                                <span>)</span>
                             </span>
                         )}
                         {isDirty && (
                             <>
                                 <ArrowIcon />
-                                <span>{getClassText(defaultClassCount)}</span>
-                                {persistedRemovedCount > 0 && (
-                                    <span className={styles.removed}>
-                                        -{persistedRemovedCount} removed
-                                    </span>
-                                )}
-                                {persistedManualCount > 0 && (
-                                    <span className={styles.added}>
-                                        +{persistedManualCount} added
+                                <span className={styles.enrolledHighlight}>
+                                    {getClassText(dirtyEnrolledCount)} enrolled
+                                </span>
+                                {(persistedRemovedCount > 0 || persistedManualCount > 0) && (
+                                    <span className={styles.breakdown}>
+                                        <span>&nbsp;({defaultClassCount} default,</span>
+                                        {persistedRemovedCount > 0 && (
+                                            <span className={styles.removed}>
+                                                -{persistedRemovedCount} removed{persistedManualCount > 0 ? ',' : ''}
+                                            </span>
+                                        )}
+                                        {persistedManualCount > 0 && (
+                                            <span className={styles.added}>
+                                                +{persistedManualCount} added
+                                            </span>
+                                        )}
+                                        <span>)</span>
                                     </span>
                                 )}
                             </>

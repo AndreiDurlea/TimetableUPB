@@ -16,11 +16,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.provider_token) {
+        localStorage.setItem('google_provider_token', session.provider_token);
+      }
       setLoading(false); 
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.provider_token) {
+        localStorage.setItem('google_provider_token', session.provider_token);
+      }
       setLoading(false);
     });
 

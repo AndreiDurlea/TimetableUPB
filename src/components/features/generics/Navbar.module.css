@@ -1,17 +1,55 @@
 .navbar {
     position: sticky;
     top: 0;
-    z-index: 10;
-    background-color: rgba(10, 10, 10, 0.75);
+    z-index: 1100;
+    background-color: var(--navbar-bg, rgba(10, 10, 10, 0.75));
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 
-    color: var(--text-light);
+    color: var(--text-color, var(--text-light));
     padding: 10px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: small;
+}
+
+.rightContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.themeToggle {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-color, var(--text-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    padding: 0;
+}
+
+.themeToggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+:global([data-theme="light"]) .themeToggle {
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+:global([data-theme="light"]) .themeToggle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.themeIcon {
+    width: 1.2em;
+    height: 1.2em;
 }
 
 .navLink {
