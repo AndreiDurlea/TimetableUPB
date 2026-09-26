@@ -5,6 +5,7 @@ import FormContainer from '../../ui/forms/FormContainer.tsx';
 import useOnScreen from '../../../hooks/misc/useOnScreen.ts';
 import FloatingWarning from '../../ui/FloatingWarning.tsx';
 import styles from './ProfileForm.module.css';
+import GoogleCalendarSync from '../calendar/GoogleCalendarSync.tsx';
 import type { Database } from '../../../lib/database.types.ts';
 
 type Class = Database['public']['Tables']['classes']['Row'];
@@ -215,6 +216,11 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
                 )
             )}
         </div>
+        {isProfilePage && (
+          <div className={styles.calendarWrapper}>
+            <GoogleCalendarSync />
+          </div>
+        )}
         <FloatingWarning show={isDangerousSave && isButtonOnScreen} message={warningMessage} />
       </div>
   );

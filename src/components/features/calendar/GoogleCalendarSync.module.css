@@ -1,54 +1,36 @@
-.section {
-  width: 100%;
-  max-width: 600px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.header {
-  margin-bottom: 20px;
-}
-
-.title {
-  font-size: 1.5em;
-  margin-bottom: 5px;
-  color: var(--text-color, var(--text-light));
-  font-weight: 600;
-}
-
-.description {
-  color: #666;
-  font-size: 0.9em;
-  margin: 0;
-}
-
-:global([data-theme="light"]) .description {
-  color: #6b7280;
-}
-
-.buttonRow {
+.calendarRow {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.label {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--text-color, var(--text-light));
+  white-space: nowrap;
+}
+
+:global([data-theme="light"]) .label {
+  color: #374151;
 }
 
 .syncButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 20px;
-  border-radius: 20px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 18px;
   font-family: inherit;
-  font-size: medium;
+  font-size: 0.85em;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
   border: 1px solid transparent;
-  min-width: 110px;
+  min-width: 96px;
 }
 
 .syncButtonNormal {
@@ -97,18 +79,9 @@
   border-color: #e5e7eb;
 }
 
-.outOfSyncLabel {
-  color: #d32f2f;
-  font-size: 0.9em;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .spinner {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: currentColor;
   border-radius: 50%;
