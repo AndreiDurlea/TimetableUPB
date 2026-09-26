@@ -2,10 +2,9 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  /* Using flex-start ensures labels and inputs align nicely if they have different heights */
   align-items: flex-start;
-  gap: 15px;
-  padding: 20px;
+  gap: 10px;
+  padding: 10px 12px;
   width: 100%;
   box-sizing: border-box;
 }

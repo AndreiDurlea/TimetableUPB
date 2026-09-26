@@ -7,18 +7,23 @@
 
 .header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   max-width: 600px;
 }
 
 .title {
-  font-size: 1.5em;
-  margin-bottom: 10px;
+  font-size: 1.35em;
+  margin-bottom: 4px;
 }
 
 .description {
   color: #666;
-  font-size: 0.9em;
+  font-size: 0.85em;
+  margin: 0;
+}
+
+:global([data-theme="light"]) .description {
+  color: #6b7280;
 }
 
 .saveButtonContainer {
@@ -29,12 +34,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 20px;
+  height: 38px;
+  padding: 0 18px;
   font-size: small;
   margin-top: 24px;
   font-family: inherit;
-  border-radius: 20px;
+  border-radius: 19px;
   box-sizing: border-box;
   transition: all 0.2s ease;
   user-select: none;
@@ -89,9 +94,9 @@
 }
 
 .status {
-  min-height: 1.5em;
-  margin-top: 15px;
-  font-size: 0.9em;
+  min-height: 1.2em;
+  margin-top: 8px;
+  font-size: 0.85em;
   color: #888;
 }
 
@@ -124,4 +129,11 @@
   color: #4caf50;
   margin-left: 6px;
   font-weight: 500;
+}
+
+.calendarWrapper {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }

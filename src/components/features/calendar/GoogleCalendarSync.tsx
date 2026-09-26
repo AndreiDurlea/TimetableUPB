@@ -44,28 +44,20 @@ export const GoogleCalendarSync: React.FC = () => {
   };
 
   return (
-    <div className={styles.section} data-testid="google-calendar-sync-section">
-      <div className={styles.header}>
-        <h2 className={styles.title}>Google Calendar</h2>
-        <p className={styles.description}>
-          Sync your university timetable with your Google Calendar.
-        </p>
-      </div>
-
-      <div className={styles.buttonRow}>
-        <button
-          type="button"
-          disabled={isSyncing || loadingEnrollments}
-          className={getButtonClass()}
-          onClick={() => void syncNow(undefined, true)}
-          data-testid="sync-google-calendar-button"
-        >
-          {isSyncing && <span className={styles.spinner} />}
-          {isOutOfSync && !isSyncing && <WarningIcon />}
-          {isInSync && !isSyncing && <CheckIcon />}
-          {getButtonText()}
-        </button>
-      </div>
+    <div className={styles.calendarRow} data-testid="google-calendar-sync-section">
+      <span className={styles.label}>Google Calendar</span>
+      <button
+        type="button"
+        disabled={isSyncing || loadingEnrollments}
+        className={getButtonClass()}
+        onClick={() => void syncNow(undefined, true)}
+        data-testid="sync-google-calendar-button"
+      >
+        {isSyncing && <span className={styles.spinner} />}
+        {isOutOfSync && !isSyncing && <WarningIcon />}
+        {isInSync && !isSyncing && <CheckIcon />}
+        {getButtonText()}
+      </button>
     </div>
   );
 };
