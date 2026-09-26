@@ -14,6 +14,11 @@
   color: white;
 }
 
+[data-theme="light"] .labelChanged {
+  color: #111827;
+}
+
+
 .select {
   padding: 8px 12px;
   border-radius: 20px;
