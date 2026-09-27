@@ -1,0 +1,1 @@
+Timetable Excels are handcrafted by humans and do not follow a normalized or uniform format across faculties or series. They must be inspected visually and parsed on a case-by-case basis rather than assuming a fixed schema.
