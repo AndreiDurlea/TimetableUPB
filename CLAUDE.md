@@ -13,4 +13,7 @@ This folder holds .md context files about the project that are shared between al
 When writing files in corecontext, dont add markdown elements unless necessary, keep short knowledge files as brief, plaintext sentences.
 When asked to add files/knowledge in memory, or asked to remember things, write them in corecontext, as that's what the user is using for managing knowledge.
 
+### /.corecontext/project/timetables.md
+Timetable Excels are handcrafted by humans and do not follow a normalized or uniform format across faculties or series. They must be inspected visually and parsed on a case-by-case basis rather than assuming a fixed schema.
+
 <!-- CORECONTEXT:AUTOGEN_END -->
