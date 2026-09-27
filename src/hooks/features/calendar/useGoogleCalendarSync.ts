@@ -8,6 +8,7 @@ import {
   getStoredSyncMetadata,
   saveSyncMetadata,
   getGoogleAccessToken,
+  extractAndStoreTokens,
   testGoogleCalendarAccess,
   initiateGoogleOAuth,
   findOrCreateCalendar,
@@ -35,6 +36,8 @@ export const useGoogleCalendarSync = () => {
   });
 
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasJustRedirectedRef = useRef(false);
+  const pendingRedirectSyncRef = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -284,15 +287,30 @@ export const useGoogleCalendarSync = () => {
 
     try {
       let token = forcedToken || (await getGoogleAccessToken());
-      let isValidToken = token ? await testGoogleCalendarAccess(token) : false;
+      let accessResult = token ? await testGoogleCalendarAccess(token) : { ok: false, error: 'No token found' };
 
       const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
-      if (!isValidToken && isMockMode) {
+      if (!accessResult.ok && isMockMode) {
         token = 'mock_valid_google_token';
-        isValidToken = true;
+        accessResult = { ok: true };
       }
 
-      if (!token || !isValidToken) {
+      if (!token || !accessResult.ok) {
+        if (wasJustRedirectedRef.current) {
+          wasJustRedirectedRef.current = false;
+          setErrorMessage(
+            accessResult.error
+              ? `Google Calendar access error: ${accessResult.error}`
+              : 'Google authorization did not grant valid calendar access. Please check permissions.'
+          );
+          return;
+        }
+
+        if (token && accessResult.status === 403) {
+          setErrorMessage(`Google Calendar access denied: ${accessResult.error || 'Permission denied'}. Please ensure Google Calendar API is enabled in Google Cloud Console.`);
+          return;
+        }
+
         if (isUserInitiated) {
           setSyncProgressMessage('Redirecting to Google authorization...');
           await initiateGoogleOAuth('sync_google=1');
@@ -369,12 +387,29 @@ export const useGoogleCalendarSync = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('sync_google') === '1' && user && !loadingEnrollments) {
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-      void syncNow(undefined, true);
+    if (params.get('sync_google') === '1') {
+      pendingRedirectSyncRef.current = true;
+      wasJustRedirectedRef.current = true;
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete('sync_google');
+      url.searchParams.delete('code');
+      window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
+
+      void extractAndStoreTokens();
     }
-  }, [user, loadingEnrollments, syncNow]);
+  }, []);
+
+  useEffect(() => {
+    if (pendingRedirectSyncRef.current && user && !loadingEnrollments) {
+      pendingRedirectSyncRef.current = false;
+      if (enrolledClasses.length > 0) {
+        void syncNow(undefined, true);
+      } else {
+        setErrorMessage('Please select your group or enroll in classes before syncing.');
+      }
+    }
+  }, [user, loadingEnrollments, enrolledClasses.length, syncNow]);
 
   return {
     syncStatus,

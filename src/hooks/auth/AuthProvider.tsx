@@ -19,6 +19,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.provider_token) {
         localStorage.setItem('google_provider_token', session.provider_token);
       }
+      if (session?.provider_refresh_token) {
+        localStorage.setItem('google_provider_refresh_token', session.provider_refresh_token);
+      }
       setLoading(false); 
     });
 
@@ -26,6 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.provider_token) {
         localStorage.setItem('google_provider_token', session.provider_token);
+      }
+      if (session?.provider_refresh_token) {
+        localStorage.setItem('google_provider_refresh_token', session.provider_refresh_token);
       }
       setLoading(false);
     });

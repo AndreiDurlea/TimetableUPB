@@ -21,35 +21,47 @@
 }
 
 .themeToggle {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-color, var(--text-light));
-    display: flex;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
+    gap: 6px;
     height: 34px;
-    border-radius: 50%;
+    padding: 0 14px;
+    border-radius: 17px;
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-    padding: 0;
+    font-family: inherit;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    user-select: none;
 }
 
 .themeToggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: #f5f5f5;
 }
 
 :global([data-theme="light"]) .themeToggle {
-    border-color: rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 :global([data-theme="light"]) .themeToggle:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.themeToggleText {
+    display: inline;
 }
 
 .themeIcon {
-    width: 1.2em;
-    height: 1.2em;
+    width: 1.1em;
+    height: 1.1em;
 }
 
 .navLink {
@@ -67,17 +79,35 @@
 }
 
 .grayButton {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    padding: 8px 15px;
+    background-color: #ffffff;
+    border: 1px solid #ffffff;
+    height: 34px;
+    padding: 0 14px;
     cursor: pointer;
-    font-size: medium;
-    color: var(--text-dark);
-    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 500;
+    color: #000000;
+    border-radius: 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
 .grayButton:hover {
-    background-color: #e0e0e0;
+    background-color: #f5f5f5;
+}
+
+:global([data-theme="light"]) .grayButton {
+    background-color: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="light"]) .grayButton:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
 }
 
 .leftContainer {
@@ -102,5 +132,11 @@
     }
     .icon {
         margin-right: 0;
+    }
+    .themeToggle {
+        padding: 0 10px;
+    }
+    .themeToggleText {
+        display: none;
     }
 }

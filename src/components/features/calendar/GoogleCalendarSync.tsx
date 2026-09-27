@@ -20,6 +20,8 @@ export const GoogleCalendarSync: React.FC = () => {
     enrolledClasses,
     loadingEnrollments,
     isSyncing,
+    syncProgressMessage,
+    errorMessage,
     syncNow,
   } = useGoogleCalendarSync();
 
@@ -37,27 +39,34 @@ export const GoogleCalendarSync: React.FC = () => {
   };
 
   const getButtonText = () => {
-    if (isSyncing) return 'Syncing...';
+    if (isSyncing) return syncProgressMessage || 'Syncing...';
     if (isOutOfSync) return 'Out of sync';
     if (isInSync) return 'Synced';
     return 'Sync now';
   };
 
   return (
-    <div className={styles.calendarRow} data-testid="google-calendar-sync-section">
-      <span className={styles.label}>Google Calendar</span>
-      <button
-        type="button"
-        disabled={isSyncing || loadingEnrollments}
-        className={getButtonClass()}
-        onClick={() => void syncNow(undefined, true)}
-        data-testid="sync-google-calendar-button"
-      >
-        {isSyncing && <span className={styles.spinner} />}
-        {isOutOfSync && !isSyncing && <WarningIcon />}
-        {isInSync && !isSyncing && <CheckIcon />}
-        {getButtonText()}
-      </button>
+    <div className={styles.container} data-testid="google-calendar-sync-section">
+      <div className={styles.calendarRow}>
+        <span className={styles.label}>Google Calendar</span>
+        <button
+          type="button"
+          disabled={isSyncing || loadingEnrollments}
+          className={getButtonClass()}
+          onClick={() => void syncNow(undefined, true)}
+          data-testid="sync-google-calendar-button"
+        >
+          {isSyncing && <span className={styles.spinner} />}
+          {isOutOfSync && !isSyncing && <WarningIcon />}
+          {isInSync && !isSyncing && <CheckIcon />}
+          {getButtonText()}
+        </button>
+      </div>
+      {errorMessage && (
+        <div className={styles.errorMessage} role="alert">
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 };
