@@ -10,7 +10,7 @@ const TypeBar: React.FC<TypeBarProps> = ({ showSplitBar, classType }) => {
   const getTypeClass = (type: string | null): string => {
     const lowerType = type?.toLowerCase() || '';
     if (lowerType.includes('course')) return styles.typeLecture;
-    if (lowerType.includes('lab')) return styles.typeLab;
+    if (lowerType.includes('lab') || lowerType.includes('project')) return styles.typeLab;
     if (lowerType.includes('seminar')) return styles.typeSeminar;
     return '';
   };
@@ -24,9 +24,11 @@ const TypeBar: React.FC<TypeBarProps> = ({ showSplitBar, classType }) => {
     transition: showSplitBar ? 'width 0.3s ease' : 'width 0.15s ease-out',
   };
 
+  const displayType = classType?.toLowerCase().includes('project') ? 'Lab' : (classType || 'Unknown');
+
   return (
     <div className={`${styles.typeBar} ${typeClass}`} style={style}>
-      {classType || 'Unknown'}
+      {displayType}
     </div>
   );
 };
