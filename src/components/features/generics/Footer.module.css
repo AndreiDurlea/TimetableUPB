@@ -12,7 +12,27 @@
 }
 
 .leftSection {
-    /* Default styles */
+    display: flex;
+    align-items: center;
+}
+
+.privacyIconLink {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    color: #777;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, color 0.2s ease;
+    vertical-align: middle;
+}
+
+.privacyIconLink:hover {
+    opacity: 0.9;
+    color: #555;
+}
+
+[data-theme="light"] .privacyIconLink:hover {
+    color: #333;
 }
 
 .rightSection {
