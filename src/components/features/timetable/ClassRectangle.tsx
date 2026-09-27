@@ -21,7 +21,7 @@ const ClassRectangle: React.FC<ClassRectangleProps> = ({ cls, style }) => {
   const getClassColor = (type: string | null) => {
     const lowerType = type?.toLowerCase() || '';
     if (lowerType.includes('course')) return 'var(--color-lecture)';
-    if (lowerType.includes('lab')) return 'var(--color-lab)';
+    if (lowerType.includes('lab') || lowerType.includes('project')) return 'var(--color-lab)';
     if (lowerType.includes('seminar')) return 'var(--color-seminar)';
     return '#8E44AD';
   };
@@ -35,6 +35,8 @@ const ClassRectangle: React.FC<ClassRectangleProps> = ({ cls, style }) => {
 
   const formatClassType = (type: string | null) => {
     if (!type) return '';
+    const lower = type.toLowerCase();
+    if (lower.includes('project')) return 'Lab';
     return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
   };
 
