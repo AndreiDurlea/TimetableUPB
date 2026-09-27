@@ -5,6 +5,7 @@ import ProtectedRoute from './components/features/generics/ProtectedRoute.tsx';
 import AddEntryPage from './pages/AddEntryPage';
 import SharePage from './pages/Share.tsx';
 import NotFoundPage from './pages/NotFound.tsx';
+import Privacy from './pages/Privacy.tsx';
 import './App.css';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Timetable />} />
         <Route path="/share/:hierarchy" element={<SharePage />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route element={<ProtectedRoute requiresAuth={true} requiresProfileComplete={false} />}>
           <Route path="/profile" element={<Profile />} />
         </Route>
