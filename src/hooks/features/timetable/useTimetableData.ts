@@ -20,7 +20,7 @@ type RelevantClass = {
 };
 
 export const useTimetableData = (tempSubgroupId: string | null) => {
-    const { user, profile } = useAuth();
+    const { user, profile, refreshTrigger } = useAuth();
     const [classes, setClasses] = useState<Class[]>([]);
     const [classesLoading, setClassesLoading] = useState(true);
     const [hierarchyString, setHierarchyString] = useState('');
@@ -145,7 +145,7 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
         };
 
         fetchClasses().catch(console.error);
-    }, [profile, tempSubgroupId, user]);
+    }, [profile, tempSubgroupId, user, refreshTrigger]);
 
     return { classes, classesLoading, hierarchyString };
 };

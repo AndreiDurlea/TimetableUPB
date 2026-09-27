@@ -15,7 +15,7 @@ type DetailedClass = Database['public']['Views']['detailed_classes']['Row'] & {
 };
 
 export const useClassSearch = () => {
-    const { user, profile, triggerRefresh } = useAuth();
+    const { user, profile, triggerRefresh, refreshTrigger } = useAuth();
     const [allClasses, setAllClasses] = useState<DetailedClass[]>([]);
     const [myClasses, setMyClasses] = useState<DetailedClass[]>([]);
     const [manualEnrollments, setManualEnrollments] = useState<string[]>([]);
@@ -113,7 +113,7 @@ export const useClassSearch = () => {
 
     useEffect(() => {
         void fetchMyClasses();
-    }, [fetchMyClasses, triggerRefresh]);
+    }, [fetchMyClasses, refreshTrigger]);
 
     const checkConflict = (target: DetailedClass, isReAdd: boolean = false): string | null => {
         if (!target.start_time || !target.end_time || !target.day_of_week) return null;
@@ -172,13 +172,17 @@ export const useClassSearch = () => {
 
         try {
             if (action === 'add') {
-                await supabase.from('user_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                const { error } = await supabase.from('user_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                if (error) throw error;
             } else if (action === 'remove_manual') {
-                await supabase.from('user_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
+                const { error } = await supabase.from('user_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
+                if (error) throw error;
             } else if (action === 'remove_default') {
-                await supabase.from('user_removed_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                const { error } = await supabase.from('user_removed_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                if (error) throw error;
             } else if (action === 're_add_default') {
-                await supabase.from('user_removed_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
+                const { error } = await supabase.from('user_removed_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
+                if (error) throw error;
             }
             triggerRefresh();
         } catch (error) {
