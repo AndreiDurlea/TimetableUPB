@@ -65,36 +65,104 @@ export const clearStoredSyncMetadata = (userId: string): void => {
   localStorage.removeItem(getSyncStorageKey(userId));
 };
 
-export const getGoogleAccessToken = async (): Promise<string | null> => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.provider_token) {
-    localStorage.setItem(TOKEN_KEY, session.provider_token);
-    return session.provider_token;
+export interface CalendarAccessResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+}
+
+export const extractAndStoreTokens = async (): Promise<string | null> => {
+  if (typeof window !== 'undefined' && window.location.hash) {
+    try {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const providerToken = hashParams.get('provider_token');
+      const providerRefreshToken = hashParams.get('provider_refresh_token');
+      if (providerToken) {
+        localStorage.setItem(TOKEN_KEY, providerToken);
+        if (providerRefreshToken) {
+          localStorage.setItem('google_provider_refresh_token', providerRefreshToken);
+        }
+        return providerToken;
+      }
+    } catch {
+      // ignore
+    }
   }
 
-  const storedToken = localStorage.getItem(TOKEN_KEY);
-  if (storedToken) {
-    return storedToken;
+  if (typeof window !== 'undefined' && window.location.search) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get('code');
+    if (code) {
+      try {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error && data?.session?.provider_token) {
+          localStorage.setItem(TOKEN_KEY, data.session.provider_token);
+          if (data.session.provider_refresh_token) {
+            localStorage.setItem('google_provider_refresh_token', data.session.provider_refresh_token);
+          }
+          return data.session.provider_token;
+        }
+      } catch {
+        // ignore
+      }
+    }
   }
 
-  return null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.provider_token) {
+      localStorage.setItem(TOKEN_KEY, session.provider_token);
+      if (session.provider_refresh_token) {
+        localStorage.setItem('google_provider_refresh_token', session.provider_refresh_token);
+      }
+      return session.provider_token;
+    }
+  } catch {
+    // ignore
+  }
+
+  return localStorage.getItem(TOKEN_KEY);
 };
 
-export const testGoogleCalendarAccess = async (token: string): Promise<boolean> => {
+export const getGoogleAccessToken = async (): Promise<string | null> => {
+  return extractAndStoreTokens();
+};
+
+export const testGoogleCalendarAccess = async (token: string): Promise<CalendarAccessResult> => {
   try {
     const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=1', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.ok;
-  } catch {
-    return false;
+    if (response.ok) {
+      return { ok: true, status: response.status };
+    }
+    const errText = await response.text();
+    let msg = `Google API status ${response.status}`;
+    try {
+      const parsed = JSON.parse(errText);
+      if (parsed?.error?.message) {
+        msg = parsed.error.message;
+      }
+    } catch {
+      if (errText) msg = errText;
+    }
+    return { ok: false, status: response.status, error: msg };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : 'Network error testing Google Calendar access',
+    };
   }
 };
 
 export const initiateGoogleOAuth = async (returnQueryParam = 'sync_google=1'): Promise<void> => {
-  const redirectUrl = new URL(window.location.origin + '/profile');
+  const targetPath = typeof window !== 'undefined' && window.location.pathname.includes('profile')
+    ? window.location.pathname
+    : '/profile';
+  const redirectUrl = new URL(window.location.origin + targetPath);
   if (returnQueryParam) {
     redirectUrl.search = returnQueryParam;
   }
