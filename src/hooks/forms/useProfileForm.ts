@@ -171,10 +171,9 @@ export const useProfileForm = (isProfilePage: boolean) => {
       const actualRemoved = removedIds.filter(id => defaultIds.has(id));
       const actualAdded = manualIds.filter(id => !defaultIds.has(id));
 
+      const total = (defaultList.length - actualRemoved.length) + actualAdded.length;
       setRemovedClassCount(actualRemoved.length);
       setAddedClassCount(actualAdded.length);
-
-      const total = (defaultList.length - actualRemoved.length) + actualAdded.length;
       setEnrolledClassCount(total);
     };
 
