@@ -5,7 +5,7 @@ import styles from './DayCardGrid.module.css';
 import { useAuth } from '../../../hooks/auth/useAuth';
 import { useTimetableData } from '../../../hooks/features/timetable/useTimetableData';
 import { useWeekLabels } from '../../../hooks/features/timetable/useWeekLabels';
-import { getSemesterWeek, isEvenWeek, getWeekLabel } from '../../../utils/semesterUtils';
+import { getSemesterWeek, isEvenWeek, getWeekLabel, SEMESTER_START } from '../../../utils/semesterUtils';
 import TimetableSelectionModal from './TimetableSelectionModal';
 import TimetableHeader from './TimetableHeader';
 
@@ -106,6 +106,10 @@ const DayCardGrid: React.FC = () => {
         const monday = new Date(today);
         monday.setDate(monday.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
 
+        if (monday < SEMESTER_START) {
+            monday.setTime(SEMESTER_START.getTime());
+        }
+
         for (let i = 0; i < 14; i++) {
             const nextDay = new Date(monday);
             nextDay.setDate(monday.getDate() + i);
@@ -128,8 +132,9 @@ const DayCardGrid: React.FC = () => {
             day.getFullYear() === today.getFullYear()
         );
 
-        if (todayIndex !== -1 && cardRefs.current[todayIndex]) {
-            cardRefs.current[todayIndex]?.scrollIntoView({
+        const targetIndex = todayIndex !== -1 ? todayIndex : 0;
+        if (cardRefs.current[targetIndex]) {
+            cardRefs.current[targetIndex]?.scrollIntoView({
                 behavior: 'smooth',
                 inline: 'center',
                 block: 'nearest'
@@ -256,8 +261,8 @@ const DayCardGrid: React.FC = () => {
         });
     };
 
-    const label1 = week1.length > 0 ? getWeekLabel(getSemesterWeek(week1[0])) : '';
-    const label2 = week2.length > 0 ? getWeekLabel(getSemesterWeek(week2[0])) : '';
+    const label1 = week1.length > 0 ? getWeekLabel(getSemesterWeek(week1[0]), week1[0]) : '';
+    const label2 = week2.length > 0 ? getWeekLabel(getSemesterWeek(week2[0]), week2[0]) : '';
 
     if (isSelectionForced && !tempSubgroupId) {
         return (

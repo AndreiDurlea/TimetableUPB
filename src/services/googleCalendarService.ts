@@ -298,9 +298,8 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
   const isOddFrequency = cls.frequency?.toLowerCase() === 'odd';
   const isBiweekly = isEvenFrequency || isOddFrequency;
 
-  // Month 1 is February in JavaScript 0-indexed Date
-  const baseDay = isEvenFrequency ? 23 + 7 : 23;
-  const targetDate = new Date(2026, 1, baseDay + (dayOfWeek - 1));
+  const baseDay = isEvenFrequency ? 28 + 7 : 28;
+  const targetDate = new Date(2026, 8, baseDay + (dayOfWeek - 1));
 
   const pad = (n: number) => String(n).padStart(2, '0');
   const year = targetDate.getFullYear();
@@ -328,8 +327,8 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
   ].filter(Boolean);
 
   const recurrenceRule = isBiweekly
-    ? 'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20260601T000000Z'
-    : 'RRULE:FREQ=WEEKLY;UNTIL=20260601T000000Z';
+    ? 'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20270123T000000Z'
+    : 'RRULE:FREQ=WEEKLY;UNTIL=20270123T000000Z';
 
   return {
     summary,
