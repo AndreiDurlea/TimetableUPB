@@ -98,7 +98,6 @@ const Navbar: React.FC = () => {
           data-testid="theme-toggle-btn"
         >
           {theme === 'light' ? <SunIcon /> : <MoonIcon />}
-          <span className={styles.themeToggleText}>{theme === 'light' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
     </nav>
