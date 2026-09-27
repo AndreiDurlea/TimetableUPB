@@ -53,11 +53,6 @@ const Navbar: React.FC = () => {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/profile`,
-        scopes: 'https://www.googleapis.com/auth/calendar',
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
       },
     });
   };

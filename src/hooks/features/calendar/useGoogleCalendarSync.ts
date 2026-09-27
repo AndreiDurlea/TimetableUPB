@@ -298,16 +298,15 @@ export const useGoogleCalendarSync = () => {
       if (!token || !accessResult.ok) {
         if (wasJustRedirectedRef.current) {
           wasJustRedirectedRef.current = false;
+          if (token && accessResult.status === 403) {
+            setErrorMessage(`Google Calendar access denied: ${accessResult.error || 'Permission denied'}. Please ensure Google Calendar API is enabled in Google Cloud Console.`);
+            return;
+          }
           setErrorMessage(
             accessResult.error
               ? `Google Calendar access error: ${accessResult.error}`
               : 'Google authorization did not grant valid calendar access. Please check permissions.'
           );
-          return;
-        }
-
-        if (token && accessResult.status === 403) {
-          setErrorMessage(`Google Calendar access denied: ${accessResult.error || 'Permission denied'}. Please ensure Google Calendar API is enabled in Google Cloud Console.`);
           return;
         }
 
