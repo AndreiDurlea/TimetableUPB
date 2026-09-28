@@ -41,7 +41,6 @@
   font-family: inherit;
   font-size: 0.85em;
   cursor: pointer;
-  transition: all 0.2s ease;
   user-select: none;
   border: 1px solid transparent;
   min-width: 96px;
@@ -100,14 +99,12 @@
   color: #000000;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s ease;
   padding: 0;
   box-sizing: border-box;
 }
 
 .smallBubble:hover {
   background-color: #f5f5f5;
-  transform: scale(1.06);
 }
 
 :global([data-theme="light"]) .smallBubble {
