@@ -12,8 +12,8 @@ import {
   testGoogleCalendarAccess,
   initiateGoogleOAuth,
   findOrCreateCalendar,
-  clearCalendarEvents,
-  syncClassesToGoogleCalendar,
+  diffSyncClassesToGoogleCalendar,
+  unlinkGoogleCalendar,
 } from '../../../services/googleCalendarService';
 
 export type SyncStatus = 'not_synced' | 'in_sync' | 'out_of_sync' | 'syncing' | 'error';
@@ -268,7 +268,7 @@ export const useGoogleCalendarSync = () => {
   const syncStatus: SyncStatus = useMemo(() => {
     if (isSyncing) return 'syncing';
     if (!syncMetadata || !syncMetadata.syncedClassIds) return 'not_synced';
-    if (isOutOfSync) return 'out_of_sync';
+    if (isOutOfSync) return 'not_synced';
     return 'in_sync';
   }, [isSyncing, syncMetadata, isOutOfSync]);
 
@@ -328,15 +328,10 @@ export const useGoogleCalendarSync = () => {
         calendarId = await findOrCreateCalendar(token, DEFAULT_CALENDAR_TITLE);
       }
 
-      setSyncProgressMessage('Emptying previous events in calendar...');
-      if (!isMockMode) {
-        await clearCalendarEvents(token, calendarId);
-      }
-
-      setSyncProgressMessage(`Adding ${enrolledClasses.length} classes to Google Calendar...`);
+      setSyncProgressMessage('Syncing schedule...');
       let createdCount = enrolledClasses.length;
       if (!isMockMode) {
-        createdCount = await syncClassesToGoogleCalendar(token, calendarId, enrolledClasses);
+        createdCount = await diffSyncClassesToGoogleCalendar(token, calendarId, enrolledClasses);
       }
 
       const newMetadata: SyncMetadata = {
@@ -363,6 +358,23 @@ export const useGoogleCalendarSync = () => {
   const syncNow = useCallback(async (forcedToken?: string, isUserInitiated = true) => {
     return executeSync(forcedToken, isUserInitiated);
   }, [executeSync]);
+
+  const removeSync = useCallback(async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    setSyncProgressMessage('Disconnecting...');
+    try {
+      const token = await getGoogleAccessToken();
+      const calendarId = syncMetadata?.calendarId || null;
+      await unlinkGoogleCalendar(user.id, token, calendarId);
+      setSyncMetadata(null);
+    } catch (err) {
+      console.error('Failed to unlink Google Calendar:', err);
+    } finally {
+      setIsSyncing(false);
+      setSyncProgressMessage('');
+    }
+  }, [user, syncMetadata]);
 
   useEffect(() => {
     if (!user || !syncMetadata || !isOutOfSync || loadingEnrollments || isSyncing) {
@@ -420,5 +432,6 @@ export const useGoogleCalendarSync = () => {
     syncProgressMessage,
     errorMessage,
     syncNow,
+    removeSync,
   };
 };
