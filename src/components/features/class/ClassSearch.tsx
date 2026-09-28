@@ -14,9 +14,9 @@ const ClassSearch: React.FC = () => {
         searchTerm,
         setSearchTerm,
         filteredClasses,
-        filterByFaculty,
-        setFilterByFaculty,
-        facultyLabel,
+        searchOutsideSeries,
+        setSearchOutsideSeries,
+        userSeriesName,
         filterType,
         setFilterType,
         loading,
@@ -36,7 +36,7 @@ const ClassSearch: React.FC = () => {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, filterByFaculty, filterType]);
+    }, [searchTerm, searchOutsideSeries, filterType]);
 
     const totalPages = Math.max(1, Math.ceil(filteredClasses.length / itemsPerPage));
 
@@ -67,8 +67,8 @@ const ClassSearch: React.FC = () => {
         const query = searchTerm.trim().toLowerCase();
         if (!query) return [];
 
-        const source = (filterByFaculty && userFacultyId)
-            ? allClasses.filter(c => c.resolved_faculty_id === userFacultyId)
+        const source = (!searchOutsideSeries && userSeriesName)
+            ? allClasses.filter(c => c.series_name === userSeriesName || (!c.series_name && (!userFacultyId || c.resolved_faculty_id === userFacultyId)))
             : allClasses;
 
         const seen = new Set<string>();
@@ -80,7 +80,7 @@ const ClassSearch: React.FC = () => {
             const shortLower = c.shorthand ? c.shorthand.toLowerCase() : '';
 
             if (nameLower.includes(query) || shortLower.includes(query)) {
-                const key = `${c.name}___${c.shorthand || ''}`;
+                const key = (c.shorthand || c.name).toLowerCase();
                 if (!seen.has(key)) {
                     seen.add(key);
                     results.push({
@@ -113,7 +113,7 @@ const ClassSearch: React.FC = () => {
         });
 
         return results.slice(0, 8);
-    }, [searchTerm, allClasses, filterByFaculty, userFacultyId]);
+    }, [searchTerm, allClasses, searchOutsideSeries, userSeriesName, userFacultyId]);
 
     if (loading) {
         return (
@@ -142,9 +142,9 @@ const ClassSearch: React.FC = () => {
                 </div>
 
                 <FilterControls
-                    filterByFaculty={filterByFaculty}
-                    onFilterByFacultyChange={(e) => setFilterByFaculty(e.target.checked)}
-                    facultyLabel={facultyLabel}
+                    searchOutsideSeries={searchOutsideSeries}
+                    onSearchOutsideSeriesChange={setSearchOutsideSeries}
+                    seriesLabel={userSeriesName}
                     filterType={filterType}
                     onFilterTypeChange={setFilterType}
                     isProfileComplete={isProfileComplete}

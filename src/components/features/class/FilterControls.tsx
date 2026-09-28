@@ -28,43 +28,42 @@ const FilterOption: React.FC<FilterOptionProps> = ({ type, label, currentFilter,
 };
 
 interface FilterControlsProps {
-    filterByFaculty: boolean;
-    onFilterByFacultyChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    facultyLabel: string;
+    searchOutsideSeries: boolean;
+    onSearchOutsideSeriesChange: (checked: boolean) => void;
+    seriesLabel?: string;
     filterType: FilterType;
     onFilterTypeChange: (type: FilterType) => void;
     isProfileComplete: boolean;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
-    filterByFaculty,
-    onFilterByFacultyChange,
-    facultyLabel,
+    searchOutsideSeries,
+    onSearchOutsideSeriesChange,
+    seriesLabel,
     filterType,
     onFilterTypeChange,
     isProfileComplete,
 }) => {
     return (
         <div className={styles.filterContainer}>
-            <div className={styles.facultyFilterContainer}>
+            <div className={styles.seriesFilterContainer}>
                 <input
                     type="checkbox"
-                    id="facultyFilter"
-                    checked={filterByFaculty}
-                    onChange={onFilterByFacultyChange}
+                    id="seriesFilter"
+                    checked={searchOutsideSeries}
+                    onChange={(e) => onSearchOutsideSeriesChange(e.target.checked)}
                     disabled={!isProfileComplete}
-                    className={styles.facultyFilterCheckbox}
-                    style={{ cursor: isProfileComplete ? 'pointer' : 'not-allowed' }}
+                    className={styles.seriesFilterCheckbox}
                 />
                 <label
-                    htmlFor="facultyFilter"
-                    className={styles.facultyFilterLabel}
+                    htmlFor="seriesFilter"
+                    className={styles.seriesFilterLabel}
                     style={{
                         color: isProfileComplete ? '#a9a9a9' : '#666',
                         cursor: isProfileComplete ? 'pointer' : 'not-allowed'
                     }}
                 >
-                    Only search classes in my faculty {facultyLabel && `(${facultyLabel})`}
+                    Search outside my series {seriesLabel && `(${seriesLabel})`}
                 </label>
             </div>
 
