@@ -21,7 +21,6 @@ export const GoogleCalendarSync: React.FC = () => {
     loadingEnrollments,
     isSyncing,
     syncProgressMessage,
-    errorMessage,
     syncNow,
   } = useGoogleCalendarSync();
 
@@ -62,11 +61,6 @@ export const GoogleCalendarSync: React.FC = () => {
           {getButtonText()}
         </button>
       </div>
-      {errorMessage && (
-        <div className={styles.errorMessage} role="alert">
-          {errorMessage}
-        </div>
-      )}
     </div>
   );
 };

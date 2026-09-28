@@ -14,17 +14,6 @@
   flex-wrap: wrap;
 }
 
-.errorMessage {
-  font-size: 0.8em;
-  color: #ef4444;
-  max-width: 500px;
-  text-align: center;
-  line-height: 1.4;
-}
-
-:global([data-theme="light"]) .errorMessage {
-  color: #dc2626;
-}
 
 .label {
   font-size: 0.9em;
