@@ -1,17 +1,24 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabase.ts';
 import { AuthContext } from './AuthContext.ts';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '../../lib/database.types.ts';
+import { 
+  getStoredSelectionRaw, 
+  removeStoredSelection, 
+  saveStoredSelection, 
+  fetchSubgroupHierarchy, 
+  type StoredSelection 
+} from '../../utils/selectionStorage.ts';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
-const SELECTION_STORAGE_KEY = 'profile_selection';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const profileHierarchyRef = useRef<StoredSelection | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -26,6 +33,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'SIGNED_OUT') {
+        if (profileHierarchyRef.current) {
+          saveStoredSelection(profileHierarchyRef.current);
+          profileHierarchyRef.current = null;
+        }
+      }
       setUser(session?.user ?? null);
       if (session?.provider_token) {
         localStorage.setItem('google_provider_token', session.provider_token);
@@ -60,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     if (data && !data.subgroup_id) {
-      const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+      const savedSelectionRaw = getStoredSelectionRaw();
       if (savedSelectionRaw) {
         const savedSelection = JSON.parse(savedSelectionRaw);
         if (savedSelection.subgroupId) {
@@ -76,13 +89,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
              setProfile(data);
            } else if (updatedProfile) {
              setProfile(updatedProfile);
-             localStorage.removeItem(SELECTION_STORAGE_KEY);
+             removeStoredSelection();
+             if (updatedProfile.subgroup_id) {
+               void fetchSubgroupHierarchy(updatedProfile.subgroup_id).then(h => {
+                 if (h) profileHierarchyRef.current = h;
+               });
+             }
            } else {
              setProfile(data);
            }
            return;
         }
       }
+    }
+
+    if (data?.subgroup_id) {
+      void fetchSubgroupHierarchy(data.subgroup_id).then(h => {
+        if (h) profileHierarchyRef.current = h;
+      });
     }
     
     setProfile(data);
@@ -109,6 +133,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, triggerRefresh]);
 
+  const logout = useCallback(async () => {
+    let hierarchy = profileHierarchyRef.current;
+    if (!hierarchy && profile?.subgroup_id) {
+      hierarchy = await fetchSubgroupHierarchy(profile.subgroup_id);
+    }
+    if (hierarchy) {
+      saveStoredSelection(hierarchy);
+      profileHierarchyRef.current = null;
+    }
+    await supabase.auth.signOut();
+  }, [profile?.subgroup_id]);
+
   const value = useMemo(() => ({
     user,
     profile,
@@ -118,8 +154,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     revalidateProfile,
     refreshTrigger,
     triggerRefresh,
-    resetEnrollments
-  }), [user, profile, loading, revalidateProfile, refreshTrigger, triggerRefresh, resetEnrollments]);
+    resetEnrollments,
+    logout,
+  }), [user, profile, loading, revalidateProfile, refreshTrigger, triggerRefresh, resetEnrollments, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
