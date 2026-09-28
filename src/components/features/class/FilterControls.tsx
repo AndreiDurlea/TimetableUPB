@@ -16,12 +16,10 @@ const FilterOption: React.FC<FilterOptionProps> = ({ type, label, currentFilter,
     return (
         <span
             onClick={() => !disabled && onFilterChange(isSelected ? 'all' : type)}
-            className={styles.filterOption}
+            className={`${styles.filterOption} ${isSelected ? styles.filterOptionSelected : ''}`}
             style={{
-                color: isSelected ? 'white' : (disabled ? '#666' : '#a9a9a9'),
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                fontWeight: isSelected ? 'bold' : 'normal',
-                textDecoration: isSelected ? 'underline' : 'none',
+                opacity: disabled ? 0.4 : 1,
             }}
         >
             {label}

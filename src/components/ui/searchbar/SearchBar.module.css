@@ -14,7 +14,7 @@
 .searchInput {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 12px 8px 40px;
+  padding: 8px 36px 8px 40px;
   border-radius: 20px;
   border: 1px solid #ccc;
   background-color: white;
@@ -39,4 +39,103 @@
   width: 1.2em;
   height: 1.2em;
   pointer-events: none;
+}
+
+.clearButton {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  border-radius: 50%;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.clearButton:hover {
+  color: #333;
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.clearIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.suggestionsDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 6px;
+  list-style: none;
+  margin: 0;
+}
+
+:global([data-theme="light"]) .suggestionsDropdown {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.suggestionItem {
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #ffffff;
+  font-size: 0.9em;
+  transition: background-color 0.12s ease;
+}
+
+:global([data-theme="light"]) .suggestionItem {
+  color: #111111;
+}
+
+.suggestionItem:hover,
+.suggestionItemActive {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+:global([data-theme="light"]) .suggestionItem:hover,
+:global([data-theme="light"]) .suggestionItemActive {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.suggestionName {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestionBadge {
+  font-size: 0.75em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #e0e0e0;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+:global([data-theme="light"]) .suggestionBadge {
+  background: rgba(0, 0, 0, 0.08);
+  color: #333333;
 }
