@@ -14,7 +14,6 @@
   flex-wrap: wrap;
 }
 
-
 .label {
   font-size: 0.9em;
   font-weight: 500;
@@ -24,6 +23,12 @@
 
 :global([data-theme="light"]) .label {
   color: #374151;
+}
+
+.buttonWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .syncButton {
@@ -64,15 +69,24 @@
   border-color: #9ca3af;
 }
 
-.syncButtonAlert {
-  background-color: #d32f2f;
-  color: white;
-  border-color: #d32f2f;
+.syncButtonSynced {
+  background-color: #18181b;
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
-.syncButtonAlert:hover:not(:disabled) {
-  background-color: #b71c1c;
-  border-color: #b71c1c;
+.syncButtonSynced:hover:not(:disabled) {
+  background-color: #27272a;
+}
+
+:global([data-theme="light"]) .syncButtonSynced {
+  background-color: #ecfdf5;
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+:global([data-theme="light"]) .syncButtonSynced:hover:not(:disabled) {
+  background-color: #d1fae5;
 }
 
 .syncButtonDisabled {
@@ -86,6 +100,49 @@
   background-color: #f3f4f6;
   color: #9ca3af;
   border-color: #e5e7eb;
+}
+
+.smallBubbles {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.smallBubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #1e1e22;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.smallBubble:hover {
+  transform: scale(1.08);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  background-color: #27272e;
+}
+
+:global([data-theme="light"]) .smallBubble {
+  background-color: #ffffff;
+  border-color: #d1d5db;
+  color: #374151;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="light"]) .smallBubble:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+  color: #111827;
 }
 
 .spinner {
