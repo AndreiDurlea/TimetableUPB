@@ -37,9 +37,6 @@ export const GoogleCalendarSync: React.FC = () => {
     if (loadingEnrollments || (enrolledClasses.length === 0 && !isSynced)) {
       return `${styles.syncButton} ${styles.syncButtonDisabled}`;
     }
-    if (isSynced) {
-      return `${styles.syncButton} ${styles.syncButtonSynced}`;
-    }
     return `${styles.syncButton} ${styles.syncButtonNormal}`;
   };
 
