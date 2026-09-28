@@ -215,11 +215,16 @@ export const useClassSearch = () => {
 
         if (!searchTerm) return true;
 
-        const term = searchTerm.toLowerCase();
-        const nameMatch = cls.name ? cls.name.toLowerCase().includes(term) : false;
-        const shorthandMatch = cls.shorthand ? cls.shorthand.toLowerCase().includes(term) : false;
+        const term = searchTerm.trim().toLowerCase();
+        const shortLower = cls.shorthand ? cls.shorthand.toLowerCase() : '';
+        const nameLower = cls.name ? cls.name.toLowerCase() : '';
 
-        return nameMatch || shorthandMatch;
+        const stopWords = new Set(['de', 'în', 'in', 'si', 'și', 'la', 'cu', 'din', 'pe']);
+        const shorthandMatch = shortLower.includes(term);
+        const wordPrefixMatch = nameLower.split(/[\s,.-]+/).some(w => !stopWords.has(w) && w.startsWith(term));
+        const nameSubstringMatch = term.length > 2 && nameLower.includes(term);
+
+        return shorthandMatch || wordPrefixMatch || nameSubstringMatch;
     })
     .sort((a, b) => {
         const seriesA = a.series_name || '';

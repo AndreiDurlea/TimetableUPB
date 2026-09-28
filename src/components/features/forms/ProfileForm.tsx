@@ -12,7 +12,7 @@ type Class = Database['public']['Tables']['classes']['Row'];
 
 interface ProfileFormProps {
   isProfilePage?: boolean;
-  children?: React.ReactNode;
+  children?: React.ReactNode | ((props: { selection: any; isFormComplete: boolean }) => React.ReactNode);
 }
 
 const WarningIcon = () => (
@@ -96,7 +96,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
             </div>
         )}
 
-        <FormContainer onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <FormContainer onSubmit={(e) => { e.preventDefault(); if (isProfilePage) void save(); }}>
           <FormSelect
               label="Faculty"
               value={selection.facultyId}
@@ -160,7 +160,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
               </div>
           )}
           
-          {children}
+          {typeof children === 'function' ? children({ selection, isFormComplete }) : children}
         </FormContainer>
         
         <div className={styles.status}>

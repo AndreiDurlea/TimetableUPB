@@ -3,7 +3,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  margin-top: 30px;
+  margin-top: 24px;
   margin-bottom: 20px;
   width: 100%;
 }
@@ -18,10 +18,10 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 620px;
+  max-width: 520px;
   padding: 0 12px;
   box-sizing: border-box;
-  gap: 12px;
+  gap: 10px;
 }
 
 .pageNumbers {
@@ -34,18 +34,18 @@
 }
 
 .pageButton {
-  background: var(--card-bg-default, #18181b);
+  background: var(--card-bg-default, #222222);
   color: var(--text-color, #ffffff);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: none;
+  outline: none;
   border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.88em;
+  padding: 0 10px;
+  font-size: 0.85em;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
   user-select: none;
-  min-width: 36px;
-  height: 36px;
+  min-width: 32px;
+  height: 32px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -53,18 +53,18 @@
 }
 
 .arrowButton {
-  padding: 6px 12px;
+  padding: 0 8px;
   flex-shrink: 0;
 }
 
-.pageButton:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
+.chevronIcon {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .pageButton:active:not(:disabled) {
-  transform: scale(0.96);
+  opacity: 0.85;
 }
 
 .pageButton:disabled {
@@ -75,27 +75,70 @@
 .activePage {
   background: #ffffff;
   color: #000000;
-  border-color: #ffffff;
   font-weight: 700;
 }
 
 :global([data-theme="light"]) .activePage {
   background: #000000;
   color: #ffffff;
-  border-color: #000000;
-}
-
-:global([data-theme="light"]) .pageButton {
-  border-color: rgba(0, 0, 0, 0.15);
-}
-
-:global([data-theme="light"]) .pageButton:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.3);
 }
 
 .ellipsis {
   color: var(--text-muted, #71717a);
   padding: 0 4px;
   font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .paginationContainer {
+    margin-top: 14px;
+    margin-bottom: 14px;
+    gap: 8px;
+  }
+
+  .infoText {
+    font-size: 0.75em;
+  }
+
+  .controlsRow {
+    gap: 4px;
+    padding: 0 4px;
+    justify-content: center;
+  }
+
+  .pageNumbers {
+    gap: 3px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pageNumbers::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pageButton {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 4px;
+    font-size: 0.7em;
+    border-radius: 5px;
+  }
+
+  .arrowButton {
+    min-width: 22px;
+    height: 22px;
+    padding: 0;
+  }
+
+  .chevronIcon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .ellipsis {
+    padding: 0 1px;
+    font-size: 0.7em;
+  }
 }
