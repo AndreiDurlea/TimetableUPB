@@ -25,6 +25,23 @@
     font-size: 0.9em;
 }
 
+.filterOption {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #a9a9a9;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+
 .filterOption:hover {
-    text-decoration: underline !important;
+    opacity: 0.85;
+}
+
+.filterOptionSelected {
+    text-decoration: none !important;
+    color: #ffffff !important;
+    font-weight: bold;
+}
+
+:global([data-theme="light"]) .filterOptionSelected {
+    color: #000000 !important;
 }

@@ -7,7 +7,6 @@ import ClassGrid from './ClassGrid.tsx';
 import Pagination from '../../ui/pagination/Pagination.tsx';
 import useResponsivePageSize from '../../../hooks/misc/useResponsivePageSize.ts';
 import styles from './ClassSearch.module.css';
-import searchBarStyles from '../../ui/searchbar/SearchBar.module.css';
 
 const ClassSearch: React.FC = () => {
     const {
@@ -24,6 +23,8 @@ const ClassSearch: React.FC = () => {
         myClasses,
         manualEnrollments,
         removedDefaultClasses,
+        allClasses,
+        userFacultyId,
         loadingId,
         checkConflict,
         handleToggle,
@@ -62,6 +63,58 @@ const ClassSearch: React.FC = () => {
         }
     };
 
+    const subjectSuggestions = useMemo(() => {
+        const query = searchTerm.trim().toLowerCase();
+        if (!query) return [];
+
+        const source = (filterByFaculty && userFacultyId)
+            ? allClasses.filter(c => c.resolved_faculty_id === userFacultyId)
+            : allClasses;
+
+        const seen = new Set<string>();
+        const results: Array<{ name: string; shorthand: string | null }> = [];
+
+        for (const c of source) {
+            if (!c.name) continue;
+            const nameLower = c.name.toLowerCase();
+            const shortLower = c.shorthand ? c.shorthand.toLowerCase() : '';
+
+            if (nameLower.includes(query) || shortLower.includes(query)) {
+                const key = `${c.name}___${c.shorthand || ''}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    results.push({
+                        name: c.name,
+                        shorthand: c.shorthand,
+                    });
+                }
+            }
+        }
+
+        if (results.length === 1 && (results[0].name.toLowerCase() === query || results[0].shorthand?.toLowerCase() === query)) {
+            return [];
+        }
+
+        results.sort((a, b) => {
+            const aShort = (a.shorthand || '').toLowerCase();
+            const bShort = (b.shorthand || '').toLowerCase();
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+
+            if (aShort === query && bShort !== query) return -1;
+            if (bShort === query && aShort !== query) return 1;
+
+            const aStarts = aName.startsWith(query) || aShort.startsWith(query);
+            const bStarts = bName.startsWith(query) || bShort.startsWith(query);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+
+            return aName.localeCompare(bName);
+        });
+
+        return results.slice(0, 8);
+    }, [searchTerm, allClasses, filterByFaculty, userFacultyId]);
+
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
@@ -73,12 +126,15 @@ const ClassSearch: React.FC = () => {
     return (
         <div ref={containerRef} id="class-search-container" style={{ width: '100%' }}>
             <div className={styles.stickyContainer}>
-                <div className={searchBarStyles.searchRow}>
+                <div className={styles.searchRow}>
                     <SearchBar
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder={isProfileComplete ? "Search for a class..." : "Complete your profile to search classes"}
                         disabled={!isProfileComplete}
+                        suggestions={subjectSuggestions}
+                        onSelectSuggestion={(item) => setSearchTerm(item.name)}
+                        onClear={() => setSearchTerm('')}
                     />
                     <SearchBadge disabled={!isProfileComplete}>
                         {isProfileComplete ? filteredClasses.length : 0}

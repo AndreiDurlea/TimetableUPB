@@ -246,6 +246,8 @@ export const useClassSearch = () => {
         myClasses,
         manualEnrollments,
         removedDefaultClasses,
+        allClasses,
+        userFacultyId,
         loadingId,
         checkConflict,
         handleToggle,
