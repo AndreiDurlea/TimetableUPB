@@ -49,7 +49,12 @@ const Footer: React.FC = () => {
   return (
     <footer className={styles.footer}>
       <div className={styles.leftSection}>
-        Made by <a href="https://andreidurlea.com" target="_blank" rel="noopener noreferrer" className={styles.link}>Andrei Durlea</a>
+        <span>
+          Made by{' '}
+          <a href="https://andreidurlea.com" target="_blank" rel="noopener noreferrer" className={styles.link}>
+            Andrei Durlea
+          </a>
+        </span>
         <Link to="/privacy" className={styles.privacyIconLink} title="Privacy Policy" aria-label="Privacy Policy">
           <LockIcon />
         </Link>
