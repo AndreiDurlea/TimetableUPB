@@ -55,6 +55,8 @@ html, body {
   /* Card Colors */
   --card-bg-default: #222222;
   --card-text: #ffffff;
+  --card-border-line: rgba(255, 255, 255, 0.1);
+  --card-grid-line: rgba(255, 255, 255, 0.05);
   --color-scheme: dark;
 
   font-family: 'Safiro', system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -78,6 +80,8 @@ html, body {
   --navbar-bg: rgba(222, 222, 222, 0.85);
   --card-bg-default: #ffffff;
   --card-text: #111827;
+  --card-border-line: rgba(0, 0, 0, 0.12);
+  --card-grid-line: rgba(0, 0, 0, 0.08);
   --color-scheme: light;
 }
 
