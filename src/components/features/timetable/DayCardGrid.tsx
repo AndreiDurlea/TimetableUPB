@@ -15,12 +15,26 @@ const DayCardGrid: React.FC = () => {
     const [activeDayIndex, setActiveDayIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
+    const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
     const separatorRef = useRef<HTMLDivElement>(null);
     const label1Ref = useRef<HTMLDivElement>(null);
     const label2Ref = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     const initialScrollDone = useRef(false);
+    const activeDayIndexRef = useRef(0);
+    const targetIndexRef = useRef(0);
+    const accumulatedDeltaRef = useRef(0);
+    const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const setGridRef = useCallback((node: HTMLDivElement | null) => {
+        gridRef.current = node;
+        setGridElement(node);
+    }, []);
+
+    useEffect(() => {
+        activeDayIndexRef.current = activeDayIndex;
+    }, [activeDayIndex]);
 
     const [showModal, setShowModal] = useState(false);
     const [tempSubgroupId, setTempSubgroupId] = useState<string | null>(null);
@@ -29,7 +43,7 @@ const DayCardGrid: React.FC = () => {
     const prevUserRef = useRef<any>(undefined);
     
     const { classes, classesLoading, hierarchyString } = useTimetableData(tempSubgroupId);
-    useWeekLabels(gridRef, containerRef, separatorRef, label1Ref, label2Ref);
+    useWeekLabels(gridRef, containerRef, separatorRef, label1Ref, label2Ref, gridElement);
 
     useEffect(() => {
         document.body.style.overflowX = 'hidden';
@@ -177,33 +191,77 @@ const DayCardGrid: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
+    const scrollToCardIndex = useCallback((idx: number) => {
         const grid = gridRef.current;
-        let snapTimeout: ReturnType<typeof setTimeout>;
+        const card = cardRefs.current[idx];
+        if (!grid || !card) return;
+
+        const cardRect = card.getBoundingClientRect();
+        const gridRect = grid.getBoundingClientRect();
+        const cardCenter = cardRect.left + cardRect.width / 2;
+        const gridCenter = gridRect.left + gridRect.width / 2;
+        const targetScrollLeft = grid.scrollLeft + (cardCenter - gridCenter);
+
+        grid.scrollTo({
+            left: targetScrollLeft,
+            behavior: 'smooth'
+        });
+    }, []);
+
+    useEffect(() => {
+        const grid = gridElement || gridRef.current;
 
         if (grid) {
             grid.addEventListener('scroll', handleScroll, { passive: true });
             const scrollTimer = setTimeout(handleScroll, 0);
 
             const handleWheel = (e: WheelEvent) => {
-                if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.shiftKey) {
+                    accumulatedDeltaRef.current = 0;
+                    targetIndexRef.current = activeDayIndexRef.current;
                     return;
                 }
 
-                if (e.deltaY !== 0) {
-                    e.preventDefault();
-                    grid.style.scrollSnapType = 'none';
+                let delta = e.deltaY !== 0 ? e.deltaY : (e.shiftKey ? e.deltaX : 0);
+                if (delta === 0) return;
+                e.preventDefault();
 
-                    let scrollAmount = e.deltaY;
-                    if (e.deltaMode === 1) scrollAmount *= 40;
-                    else if (e.deltaMode === 2) scrollAmount *= 800;
+                if (e.deltaMode === 1) delta *= 40;
+                else if (e.deltaMode === 2) delta *= 800;
 
-                    grid.scrollLeft += scrollAmount;
+                if (resetTimerRef.current === null) {
+                    targetIndexRef.current = activeDayIndexRef.current;
+                }
 
-                    clearTimeout(snapTimeout);
-                    snapTimeout = setTimeout(() => {
-                        grid.style.scrollSnapType = 'x mandatory';
-                    }, 150);
+                if (resetTimerRef.current) {
+                    clearTimeout(resetTimerRef.current);
+                }
+                resetTimerRef.current = setTimeout(() => {
+                    accumulatedDeltaRef.current = 0;
+                    resetTimerRef.current = null;
+                }, 200);
+
+                if ((accumulatedDeltaRef.current > 0 && delta < 0) || (accumulatedDeltaRef.current < 0 && delta > 0)) {
+                    accumulatedDeltaRef.current = 0;
+                }
+
+                let steps = 0;
+                if (Math.abs(delta) >= 100) {
+                    const notchUnit = Math.abs(delta) >= 120 ? 120 : 100;
+                    steps = Math.round(delta / notchUnit);
+                    accumulatedDeltaRef.current = 0;
+                } else {
+                    accumulatedDeltaRef.current += delta;
+                    if (Math.abs(accumulatedDeltaRef.current) >= 80) {
+                        steps = Math.trunc(accumulatedDeltaRef.current / 80);
+                        accumulatedDeltaRef.current %= 80;
+                    }
+                }
+
+                if (steps !== 0) {
+                    const nextTarget = Math.max(0, Math.min(cardRefs.current.length - 1, targetIndexRef.current + steps));
+                    targetIndexRef.current = nextTarget;
+                    scrollToCardIndex(nextTarget);
                 }
             };
 
@@ -212,11 +270,13 @@ const DayCardGrid: React.FC = () => {
             return () => {
                 grid.removeEventListener('scroll', handleScroll);
                 grid.removeEventListener('wheel', handleWheel);
-                clearTimeout(snapTimeout);
+                if (resetTimerRef.current) {
+                    clearTimeout(resetTimerRef.current);
+                }
                 clearTimeout(scrollTimer);
             };
         }
-    }, [handleScroll]);
+    }, [gridElement, handleScroll, scrollToCardIndex]);
 
     const handleModalSubmit = (selectedSubgroupId?: string) => {
         let subgroupId = selectedSubgroupId;
@@ -267,6 +327,11 @@ const DayCardGrid: React.FC = () => {
                         cardRefs.current[index] = el;
                     }}
                     className={styles.cardWrapper}
+                    onClick={() => {
+                        if (index !== activeDayIndex) {
+                            scrollToCardIndex(index);
+                        }
+                    }}
                 >
                     <DayCard
                         date={day}
@@ -311,7 +376,7 @@ const DayCardGrid: React.FC = () => {
             />
 
             <div className={styles.container} ref={containerRef}>
-                <div className={styles.dayCardGrid} ref={gridRef}>
+                <div className={styles.dayCardGrid} ref={setGridRef}>
                     {renderCards(week1, 0)}
 
                     <div className={styles.weekSeparator} ref={separatorRef}>
