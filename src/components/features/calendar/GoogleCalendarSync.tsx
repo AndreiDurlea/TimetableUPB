@@ -25,23 +25,22 @@ export const GoogleCalendarSync: React.FC = () => {
     syncStatus,
     enrolledClasses,
     loadingEnrollments,
-    isSyncing,
-    syncProgressMessage,
     syncNow,
     removeSync,
   } = useGoogleCalendarSync();
 
   const isSynced = syncStatus === 'in_sync';
+  const isSyncing = syncStatus === 'syncing';
 
   const getButtonClass = () => {
-    if (loadingEnrollments || (enrolledClasses.length === 0 && !isSynced)) {
+    if (loadingEnrollments || (enrolledClasses.length === 0 && !isSynced && !isSyncing)) {
       return `${styles.syncButton} ${styles.syncButtonDisabled}`;
     }
     return `${styles.syncButton} ${styles.syncButtonNormal}`;
   };
 
   const getButtonText = () => {
-    if (isSyncing) return syncProgressMessage || 'Syncing...';
+    if (isSyncing) return 'Syncing';
     if (isSynced) return 'Synced';
     return 'Sync now';
   };

@@ -23,3 +23,19 @@
     box-sizing: border-box;
     padding: 0 16px;
 }
+
+.noClasses {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 60px 20px;
+    color: #888888;
+    font-size: 0.95rem;
+    letter-spacing: 0.2px;
+}
+
+.resultsArea {
+    width: 100%;
+    touch-action: pan-y;
+}

@@ -33,6 +33,10 @@ const ClassSearch: React.FC = () => {
     const itemsPerPage = useResponsivePageSize();
     const [currentPage, setCurrentPage] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
+    const touchStartXRef = useRef<number | null>(null);
+    const touchStartYRef = useRef<number | null>(null);
+    const touchStartTimeRef = useRef<number>(0);
+    const isSwipingRef = useRef(false);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -63,6 +67,55 @@ const ClassSearch: React.FC = () => {
         }
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length !== 1) return;
+        touchStartXRef.current = e.touches[0].clientX;
+        touchStartYRef.current = e.touches[0].clientY;
+        touchStartTimeRef.current = Date.now();
+        isSwipingRef.current = false;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+        if (e.changedTouches.length !== 1) return;
+
+        const diffX = e.changedTouches[0].clientX - touchStartXRef.current;
+        const diffY = e.changedTouches[0].clientY - touchStartYRef.current;
+        const elapsed = Date.now() - touchStartTimeRef.current;
+
+        touchStartXRef.current = null;
+        touchStartYRef.current = null;
+
+        if (elapsed > 600) return;
+
+        const absX = Math.abs(diffX);
+        const absY = Math.abs(diffY);
+
+        if (absX >= 40 && absX > absY * 1.4) {
+            isSwipingRef.current = true;
+            setTimeout(() => {
+                isSwipingRef.current = false;
+            }, 100);
+
+            if (diffX < 0) {
+                if (currentPage < totalPages) {
+                    handlePageChange(currentPage + 1);
+                }
+            } else {
+                if (currentPage > 1) {
+                    handlePageChange(currentPage - 1);
+                }
+            }
+        }
+    };
+
+    const handleClickCapture = (e: React.MouseEvent) => {
+        if (isSwipingRef.current) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    };
+
     const subjectSuggestions = useMemo(() => {
         const query = searchTerm.trim().toLowerCase();
         if (!query) return [];
@@ -73,13 +126,19 @@ const ClassSearch: React.FC = () => {
 
         const seen = new Set<string>();
         const results: Array<{ name: string; shorthand: string | null }> = [];
+        const stopWords = new Set(['de', 'în', 'in', 'si', 'și', 'la', 'cu', 'din', 'pe']);
 
         for (const c of source) {
             if (!c.name) continue;
             const nameLower = c.name.toLowerCase();
             const shortLower = c.shorthand ? c.shorthand.toLowerCase() : '';
 
-            if (nameLower.includes(query) || shortLower.includes(query)) {
+            const shorthandMatch = shortLower.includes(query);
+            const words = nameLower.split(/[\s,.-]+/).filter(w => !stopWords.has(w));
+            const wordPrefixMatch = words.some(w => w.startsWith(query));
+            const nameSubstringMatch = query.length > 2 && nameLower.includes(query);
+
+            if (shorthandMatch || wordPrefixMatch || nameSubstringMatch) {
                 const key = (c.shorthand || c.name).toLowerCase();
                 if (!seen.has(key)) {
                     seen.add(key);
@@ -104,10 +163,20 @@ const ClassSearch: React.FC = () => {
             if (aShort === query && bShort !== query) return -1;
             if (bShort === query && aShort !== query) return 1;
 
-            const aStarts = aName.startsWith(query) || aShort.startsWith(query);
-            const bStarts = bName.startsWith(query) || bShort.startsWith(query);
-            if (aStarts && !bStarts) return -1;
-            if (!aStarts && bStarts) return 1;
+            const aShortStarts = aShort.startsWith(query);
+            const bShortStarts = bShort.startsWith(query);
+            if (aShortStarts && !bShortStarts) return -1;
+            if (!aShortStarts && bShortStarts) return 1;
+
+            const aNameStarts = aName.startsWith(query);
+            const bNameStarts = bName.startsWith(query);
+            if (aNameStarts && !bNameStarts) return -1;
+            if (!aNameStarts && bNameStarts) return 1;
+
+            const aWordStarts = aName.split(/[\s,.-]+/).some(w => !stopWords.has(w) && w.startsWith(query));
+            const bWordStarts = bName.split(/[\s,.-]+/).some(w => !stopWords.has(w) && w.startsWith(query));
+            if (aWordStarts && !bWordStarts) return -1;
+            if (!aWordStarts && bWordStarts) return 1;
 
             return aName.localeCompare(bName);
         });
@@ -151,23 +220,36 @@ const ClassSearch: React.FC = () => {
                 />
             </div>
 
-            <ClassGrid
-                classes={paginatedClasses}
-                myClasses={myClasses}
-                manualEnrollments={manualEnrollments}
-                removedDefaultClasses={removedDefaultClasses}
-                loadingId={loadingId}
-                checkConflict={checkConflict}
-                onToggle={handleToggle}
-            />
+            {isProfileComplete && filteredClasses.length === 0 ? (
+                <div className={styles.noClasses}>
+                    No classes found
+                </div>
+            ) : (
+                <div
+                    className={styles.resultsArea}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onClickCapture={handleClickCapture}
+                >
+                    <ClassGrid
+                        classes={paginatedClasses}
+                        myClasses={myClasses}
+                        manualEnrollments={manualEnrollments}
+                        removedDefaultClasses={removedDefaultClasses}
+                        loadingId={loadingId}
+                        checkConflict={checkConflict}
+                        onToggle={handleToggle}
+                    />
 
-            <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={filteredClasses.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={handlePageChange}
-            />
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={filteredClasses.length}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={handlePageChange}
+                    />
+                </div>
+            )}
         </div>
     );
 };

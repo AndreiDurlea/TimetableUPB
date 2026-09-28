@@ -1,23 +1,7 @@
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 .container {
     position: relative;
     height: calc(100vh - 160px);
     width: 100%;
-    opacity: 0; /* Start hidden */
-}
-
-.container.visible {
-    animation: fadeIn 0.5s ease-out forwards;
 }
 
 .dayCardGrid {
