@@ -26,6 +26,7 @@ const DayCardGrid: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [tempSubgroupId, setTempSubgroupId] = useState<string | null>(null);
     const [isSelectionForced, setIsSelectionForced] = useState(false);
+    const authInitializedRef = useRef(false);
     
     const { classes, classesLoading, hierarchyString } = useTimetableData(tempSubgroupId);
     useWeekLabels(gridRef, containerRef, separatorRef, label1Ref, label2Ref);
@@ -60,18 +61,21 @@ const DayCardGrid: React.FC = () => {
             return;
         }
 
-        if (user) {
-            setTempSubgroupId(null);
-            setShowModal(false);
-            setIsSelectionForced(false);
-        } else {
-            if (savedSubgroupId) {
-                setTempSubgroupId(savedSubgroupId);
+        if (!authInitializedRef.current) {
+            authInitializedRef.current = true;
+            if (user) {
+                setTempSubgroupId(null);
                 setShowModal(false);
                 setIsSelectionForced(false);
             } else {
-                setShowModal(true);
-                setIsSelectionForced(true);
+                if (savedSubgroupId) {
+                    setTempSubgroupId(savedSubgroupId);
+                    setShowModal(false);
+                    setIsSelectionForced(false);
+                } else {
+                    setShowModal(true);
+                    setIsSelectionForced(true);
+                }
             }
         }
     }, [user, loading, navigate]);
@@ -210,15 +214,24 @@ const DayCardGrid: React.FC = () => {
         }
     }, [handleScroll]);
 
-    const handleModalSubmit = () => {
-        const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
-        if (savedSelectionRaw) {
-            const savedSelection = JSON.parse(savedSelectionRaw);
-            if (savedSelection.subgroupId) {
-                setTempSubgroupId(savedSelection.subgroupId);
-                setShowModal(false);
-                setIsSelectionForced(false);
+    const handleModalSubmit = (selectedSubgroupId?: string) => {
+        let subgroupId = selectedSubgroupId;
+        if (!subgroupId) {
+            const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+            if (savedSelectionRaw) {
+                try {
+                    const parsed = JSON.parse(savedSelectionRaw);
+                    if (parsed?.subgroupId) {
+                        subgroupId = parsed.subgroupId;
+                    }
+                } catch {
+                }
             }
+        }
+        if (subgroupId) {
+            setTempSubgroupId(subgroupId);
+            setShowModal(false);
+            setIsSelectionForced(false);
         }
     };
 
@@ -292,7 +305,7 @@ const DayCardGrid: React.FC = () => {
                 isUserLoggedIn={!!user}
             />
 
-            <div className={`${styles.container} ${!classesLoading ? styles.visible : ''}`} ref={containerRef}>
+            <div className={styles.container} ref={containerRef}>
                 <div className={styles.dayCardGrid} ref={gridRef}>
                     {renderCards(week1, 0)}
 

@@ -5,7 +5,7 @@ import styles from './TimetableSelectionModal.module.css';
 interface TimetableSelectionModalProps {
   show: boolean;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (subgroupId?: string) => void;
   isUserLoggedIn: boolean;
 }
 
@@ -18,22 +18,28 @@ const TimetableSelectionModal: React.FC<TimetableSelectionModalProps> = ({ show,
     <div className={styles.overlay}>
       <div className={styles.modalContent}>
         <ProfileForm isProfilePage={false}>
-          <div className={styles.modalActions}>
-            <button
-              onClick={onSubmit}
-              className={styles.modalButton}
-            >
-              View Timetable
-            </button>
-            {isUserLoggedIn && (
+          {({ selection, isFormComplete }: { selection: any; isFormComplete: boolean }) => (
+            <div className={styles.modalActions}>
               <button
-                onClick={onClose}
+                type="button"
+                onClick={() => onSubmit(selection?.subgroupId)}
+                disabled={!isFormComplete}
                 className={styles.modalButton}
+                style={{ opacity: !isFormComplete ? 0.5 : 1, cursor: !isFormComplete ? 'not-allowed' : 'pointer' }}
               >
-                Cancel
+                View Timetable
               </button>
-            )}
-          </div>
+              {isUserLoggedIn && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className={styles.modalButton}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
         </ProfileForm>
       </div>
     </div>

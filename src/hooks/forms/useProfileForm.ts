@@ -368,8 +368,20 @@ export const useProfileForm = (isProfilePage: boolean) => {
       if (options.faculties.length === 1 && !newSelection.facultyId) { newSelection.facultyId = options.faculties[0].id; changed = true; }
       if (options.domains.length === 1 && !newSelection.domainId) { newSelection.domainId = options.domains[0].id; changed = true; }
       if (options.series.length === 1 && !newSelection.seriesId) { newSelection.seriesId = options.series[0].id; changed = true; }
-      if (options.groups.length === 1 && !newSelection.groupId) { newSelection.groupId = options.groups[0].id; changed = true; }
-      if (options.subgroups.length === 1 && !newSelection.subgroupId) { newSelection.subgroupId = options.subgroups[0].id; changed = true; }
+
+      if (!isProfilePage) {
+        if (options.groups.length > 0 && (!newSelection.groupId || !options.groups.some(g => g.id === newSelection.groupId))) {
+          newSelection.groupId = options.groups[0].id;
+          changed = true;
+        }
+        if (options.subgroups.length > 0 && (!newSelection.subgroupId || !options.subgroups.some(s => s.id === newSelection.subgroupId))) {
+          newSelection.subgroupId = options.subgroups[0].id;
+          changed = true;
+        }
+      } else {
+        if (options.groups.length === 1 && !newSelection.groupId) { newSelection.groupId = options.groups[0].id; changed = true; }
+        if (options.subgroups.length === 1 && !newSelection.subgroupId) { newSelection.subgroupId = options.subgroups[0].id; changed = true; }
+      }
       
       if (changed && !isProfilePage) {
         localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));

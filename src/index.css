@@ -69,13 +69,13 @@ html, body {
 }
 
 [data-theme="light"] {
-  --background-color: #f7f7f8;
+  --background-color: #dedede;
   --text-color: #111827;
   --text-light: #111827;
   --text-dark: #111827;
   --text-light-secondary: rgba(0, 0, 0, 0.6);
   --primary-accent: #111827;
-  --navbar-bg: rgba(247, 247, 248, 0.85);
+  --navbar-bg: rgba(222, 222, 222, 0.85);
   --card-bg-default: #ffffff;
   --card-text: #111827;
   --color-scheme: light;
