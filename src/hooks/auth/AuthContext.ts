@@ -14,6 +14,7 @@ export interface AuthContextType {
   refreshTrigger: number;
   triggerRefresh: () => void;
   resetEnrollments: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

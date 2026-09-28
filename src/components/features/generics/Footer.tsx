@@ -23,7 +23,7 @@ const LockIcon = () => (
 );
 
 const Footer: React.FC = () => {
-  const { user, triggerRefresh } = useAuth();
+  const { user, triggerRefresh, logout } = useAuth();
   const hasSelection = useHasSelectedSchedule();
 
   const handleLogin = async () => {
@@ -36,7 +36,7 @@ const Footer: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
   };
 
   const handleReset = async () => {
