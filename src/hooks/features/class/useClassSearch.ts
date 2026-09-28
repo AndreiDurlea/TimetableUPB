@@ -24,9 +24,9 @@ export const useClassSearch = () => {
     const [loading, setLoading] = useState(true);
     const [loadingId, setLoadingId] = useState<string | null>(null);
 
-    const [filterByFaculty, setFilterByFaculty] = useState(true);
+    const [searchOutsideSeries, setSearchOutsideSeries] = useState(false);
+    const [userSeriesName, setUserSeriesName] = useState<string>('');
     const [userFacultyId, setUserFacultyId] = useState<string | null>(null);
-    const [facultyLabel, setFacultyLabel] = useState<string>('');
     const [filterType, setFilterType] = useState<'all' | 'Course' | 'Lab' | 'Seminar'>('all');
 
     const isProfileComplete = !!profile?.subgroup_id;
@@ -38,14 +38,17 @@ export const useClassSearch = () => {
             if (!profile?.subgroup_id) return;
             const { data } = await supabase
                 .from('subgroups')
-                .select(`groups (series (domains (faculty_id, faculties (shorthand))))`)
+                .select(`groups (series (name, domains (faculty_id)))`)
                 .eq('id', profile.subgroup_id)
                 .single();
 
-            const domains = data?.groups?.series?.domains;
-            if (domains) {
-                setUserFacultyId(domains.faculty_id);
-                setFacultyLabel(domains.faculties?.shorthand || '');
+            const series = data?.groups?.series;
+            if (series) {
+                setUserSeriesName(series.name || '');
+                const domains = series.domains;
+                if (domains) {
+                    setUserFacultyId(domains.faculty_id);
+                }
             }
         };
         void fetchFacultyInfo();
@@ -197,8 +200,13 @@ export const useClassSearch = () => {
     .filter(cls => {
         if (!isProfileComplete) return false;
 
-        if (filterByFaculty && userFacultyId && cls.resolved_faculty_id !== userFacultyId) {
-            return false;
+        if (!searchOutsideSeries && userSeriesName) {
+            if (cls.series_name && cls.series_name !== userSeriesName) {
+                return false;
+            }
+            if (!cls.series_name && userFacultyId && cls.resolved_faculty_id !== userFacultyId) {
+                return false;
+            }
         }
 
         if (filterType !== 'all' && cls.class_type !== filterType) {
@@ -237,9 +245,9 @@ export const useClassSearch = () => {
         searchTerm,
         setSearchTerm,
         filteredClasses,
-        filterByFaculty,
-        setFilterByFaculty,
-        facultyLabel,
+        searchOutsideSeries,
+        setSearchOutsideSeries,
+        userSeriesName,
         filterType,
         setFilterType,
         loading,
