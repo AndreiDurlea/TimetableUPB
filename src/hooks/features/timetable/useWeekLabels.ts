@@ -5,7 +5,8 @@ export const useWeekLabels = (
     containerRef: React.RefObject<HTMLDivElement | null>,
     separatorRef: React.RefObject<HTMLDivElement | null>,
     label1Ref: React.RefObject<HTMLDivElement | null>,
-    label2Ref: React.RefObject<HTMLDivElement | null>
+    label2Ref: React.RefObject<HTMLDivElement | null>,
+    gridElement?: HTMLDivElement | null
 ) => {
     const handleScroll = useCallback(() => {
         if (!gridRef.current || !containerRef.current || !separatorRef.current || !label1Ref.current || !label2Ref.current) return;
@@ -73,5 +74,5 @@ export const useWeekLabels = (
             clearTimeout(timerId);
             if (ro) ro.disconnect();
         };
-    }, [gridRef, containerRef, handleScroll]);
+    }, [gridRef, containerRef, handleScroll, gridElement]);
 };
