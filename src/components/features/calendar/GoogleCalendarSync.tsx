@@ -23,8 +23,6 @@ const CloseIcon = () => (
 export const GoogleCalendarSync: React.FC = () => {
   const {
     syncStatus,
-    enrolledClasses,
-    loadingEnrollments,
     syncNow,
     removeSync,
   } = useGoogleCalendarSync();
@@ -32,11 +30,9 @@ export const GoogleCalendarSync: React.FC = () => {
   const isSynced = syncStatus === 'in_sync';
   const isSyncing = syncStatus === 'syncing';
 
-  const getButtonClass = () => {
-    if (loadingEnrollments || (enrolledClasses.length === 0 && !isSynced && !isSyncing)) {
-      return `${styles.syncButton} ${styles.syncButtonDisabled}`;
-    }
-    return `${styles.syncButton} ${styles.syncButtonNormal}`;
+  const handleSyncClick = () => {
+    if (isSyncing) return;
+    void syncNow(undefined, true);
   };
 
   const getButtonText = () => {
@@ -52,9 +48,8 @@ export const GoogleCalendarSync: React.FC = () => {
         <div className={styles.buttonWrapper}>
           <button
             type="button"
-            disabled={isSyncing || loadingEnrollments}
-            className={getButtonClass()}
-            onClick={() => void syncNow(undefined, true)}
+            className={`${styles.syncButton} ${isSyncing ? styles.syncButtonSyncing : ''}`}
+            onClick={handleSyncClick}
             data-testid="sync-google-calendar-button"
           >
             {isSyncing && <span className={styles.spinner} />}
