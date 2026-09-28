@@ -33,7 +33,7 @@ export const useGoogleCalendarSync = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoSyncAuthFailed, setAutoSyncAuthFailed] = useState(false);
   const [syncMetadata, setSyncMetadata] = useState<SyncMetadata | null>(() => {
-    return user ? getStoredSyncMetadata(user.id) : null;
+    return user ? getStoredSyncMetadata(user.id, user.user_metadata) : null;
   });
 
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,7 +42,7 @@ export const useGoogleCalendarSync = () => {
 
   useEffect(() => {
     if (user) {
-      setSyncMetadata(getStoredSyncMetadata(user.id));
+      setSyncMetadata(getStoredSyncMetadata(user.id, user.user_metadata));
     } else {
       setSyncMetadata(null);
     }
@@ -350,7 +350,7 @@ export const useGoogleCalendarSync = () => {
         userSubgroupId: profile?.subgroup_id || null,
       };
 
-      saveSyncMetadata(user.id, newMetadata);
+      await saveSyncMetadata(user.id, newMetadata);
       setSyncMetadata(newMetadata);
       setAutoSyncAuthFailed(false);
       setSyncProgressMessage('');

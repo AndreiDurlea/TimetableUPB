@@ -50,7 +50,17 @@ export const DEFAULT_CALENDAR_TITLE = 'Orar facultate';
 
 export const getSyncStorageKey = (userId: string) => `${STORAGE_PREFIX}${userId}`;
 
-export const getStoredSyncMetadata = (userId: string): SyncMetadata | null => {
+export const getStoredSyncMetadata = (userId: string, userMetadata?: Record<string, any> | null): SyncMetadata | null => {
+  if (userMetadata && userMetadata.google_calendar_sync) {
+    const remote = userMetadata.google_calendar_sync as SyncMetadata;
+    if (remote && remote.calendarId) {
+      try {
+        localStorage.setItem(getSyncStorageKey(userId), JSON.stringify(remote));
+      } catch {}
+      return remote;
+    }
+  }
+
   try {
     const raw = localStorage.getItem(getSyncStorageKey(userId));
     if (!raw) return null;
@@ -60,12 +70,32 @@ export const getStoredSyncMetadata = (userId: string): SyncMetadata | null => {
   }
 };
 
-export const saveSyncMetadata = (userId: string, data: SyncMetadata): void => {
-  localStorage.setItem(getSyncStorageKey(userId), JSON.stringify(data));
+export const saveSyncMetadata = async (userId: string, data: SyncMetadata): Promise<void> => {
+  try {
+    localStorage.setItem(getSyncStorageKey(userId), JSON.stringify(data));
+  } catch {}
+
+  try {
+    await supabase.auth.updateUser({
+      data: { google_calendar_sync: data }
+    });
+  } catch (err) {
+    console.error('Failed to persist sync metadata to user account:', err);
+  }
 };
 
-export const clearStoredSyncMetadata = (userId: string): void => {
-  localStorage.removeItem(getSyncStorageKey(userId));
+export const clearStoredSyncMetadata = async (userId: string): Promise<void> => {
+  try {
+    localStorage.removeItem(getSyncStorageKey(userId));
+  } catch {}
+
+  try {
+    await supabase.auth.updateUser({
+      data: { google_calendar_sync: null }
+    });
+  } catch (err) {
+    console.error('Failed to clear sync metadata from user account:', err);
+  }
 };
 
 export interface CalendarAccessResult {

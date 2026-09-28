@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import ProfileForm from '../components/features/forms/ProfileForm.tsx';
 import ClassSearch from '../components/features/class/ClassSearch.tsx';
 import Navbar from '../components/features/generics/Navbar';
 import Footer from '../components/features/generics/Footer';
+import LoadingIndicator from '../components/ui/LoadingIndicator.tsx';
+import { useAuth } from '../hooks/auth/useAuth.ts';
+import { useHasSelectedSchedule } from '../hooks/misc/useHasSelectedSchedule.ts';
 
 const Profile: React.FC = () => {
+  const { loading } = useAuth();
+  const hasSelection = useHasSelectedSchedule();
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [showClassSearch, setShowClassSearch] = useState(false);
 
@@ -20,6 +26,14 @@ const Profile: React.FC = () => {
       clearTimeout(timer2);
     };
   }, []);
+
+  if (loading) {
+    return <LoadingIndicator />;
+  }
+
+  if (!hasSelection) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div style={{
