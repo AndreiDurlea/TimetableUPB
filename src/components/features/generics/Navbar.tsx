@@ -62,7 +62,7 @@ const Navbar: React.FC = () => {
       <div className={styles.leftContainer}>
         <Link to="/" className={styles.navLink}>
           <HomeIcon />
-          <span className={styles.navText}>Timetable</span>
+          <span className={styles.navText}>PoliTimetable</span>
         </Link>
         {is_admin && (
           <Link to="/add" className={styles.navLink}>
