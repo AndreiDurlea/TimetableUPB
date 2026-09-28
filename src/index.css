@@ -57,6 +57,7 @@ html, body {
   --card-text: #ffffff;
   --card-border-line: rgba(255, 255, 255, 0.1);
   --card-grid-line: rgba(255, 255, 255, 0.05);
+  --overlay-bg: rgba(0, 0, 0, 0.5);
   --color-scheme: dark;
 
   font-family: 'Safiro', system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -82,6 +83,7 @@ html, body {
   --card-text: #111827;
   --card-border-line: rgba(0, 0, 0, 0.12);
   --card-grid-line: rgba(0, 0, 0, 0.08);
+  --overlay-bg: rgba(222, 222, 222, 0.75);
   --color-scheme: light;
 }
 
