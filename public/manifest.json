@@ -1,6 +1,6 @@
 {
-  "name": "TimetableUPB",
-  "short_name": "Timetable",
+  "name": "PoliTimetable",
+  "short_name": "PoliTimetable",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

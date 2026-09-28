@@ -17,7 +17,7 @@ const Privacy: React.FC = () => {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Overview</h2>
             <p className={styles.paragraph}>
-              Timetable UPB (<a href="https://orar.andreidurlea.com" className={styles.link}>orar.andreidurlea.com</a>) is an open-source student timetable and academic schedule organizer built for students of the National University of Science and Technology Politehnica Bucharest.
+              PoliTimetable (<a href="https://orar.andreidurlea.com" className={styles.link}>orar.andreidurlea.com</a>) is an open-source student timetable and academic schedule organizer built for students of the National University of Science and Technology Politehnica Bucharest.
             </p>
             <p className={styles.paragraph}>
               Your privacy is fundamental. This policy explains what information is collected, how it is used, and your choices regarding your data.
@@ -43,7 +43,7 @@ const Privacy: React.FC = () => {
             <h2 className={styles.sectionTitle}>Google API Limited Use Disclosure</h2>
             <div className={styles.callout}>
               <p className={styles.paragraph} style={{ margin: 0 }}>
-                Timetable UPB&apos;s use and transfer of information received from Google APIs to any other app will adhere to the{' '}
+                PoliTimetable&apos;s use and transfer of information received from Google APIs to any other app will adhere to the{' '}
                 <a
                   href="https://developers.google.com/terms/api-services-user-data-policy"
                   target="_blank"
@@ -77,7 +77,7 @@ const Privacy: React.FC = () => {
                 You can reset all your enrolled course modifications directly from the footer or profile settings.
               </li>
               <li className={styles.listItem}>
-                You can revoke Timetable UPB&apos;s Google Calendar access at any time through your{' '}
+                You can revoke PoliTimetable&apos;s Google Calendar access at any time through your{' '}
                 <a
                   href="https://myaccount.google.com/permissions"
                   target="_blank"
