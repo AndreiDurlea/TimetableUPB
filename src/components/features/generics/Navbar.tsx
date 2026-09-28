@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase.ts';
 import { useAuth } from '../../../hooks/auth/useAuth.ts';
 import { useTheme } from '../../../hooks/misc/useTheme.ts';
+import { useHasSelectedSchedule } from '../../../hooks/misc/useHasSelectedSchedule.ts';
 import styles from './Navbar.module.css';
 
 const PersonIcon = () => (
@@ -47,6 +48,7 @@ const MoonIcon = () => (
 const Navbar: React.FC = () => {
   const { user, loading, is_admin } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const hasSelection = useHasSelectedSchedule();
 
   const handleGoogleSignIn = async () => {
     await supabase.auth.signInWithOAuth({
@@ -75,9 +77,11 @@ const Navbar: React.FC = () => {
         {loading ? (
           <span className={styles.navLink}>Loading...</span>
         ) : !user ? (
-          <button onClick={handleGoogleSignIn} className={styles.grayButton}>
-            Login with Google
-          </button>
+          hasSelection ? (
+            <button onClick={handleGoogleSignIn} className={styles.grayButton}>
+              Login with Google
+            </button>
+          ) : null
         ) : (
           <Link to="/profile" className={styles.navLink}>
             <PersonIcon />

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../auth/useAuth';
+import { getClassStudyYear } from '../../../utils/styleUtils';
 import type { Database } from '../../../lib/database.types';
 
 type DetailedClass = Database['public']['Views']['detailed_classes']['Row'] & {
@@ -201,6 +202,12 @@ export const useClassSearch = () => {
         if (!isProfileComplete) return false;
 
         if (!searchOutsideSeries && userSeriesName) {
+            const userYear = parseInt(userSeriesName.charAt(0), 10);
+            const classYear = getClassStudyYear(cls);
+
+            if (classYear && userYear && classYear !== userYear) {
+                return false;
+            }
             if (cls.series_name && cls.series_name !== userSeriesName) {
                 return false;
             }
