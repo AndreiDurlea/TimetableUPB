@@ -84,13 +84,21 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid var(--card-border-line, rgba(255, 255, 255, 0.1));
 }
 
 .gridRow {
   flex: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--card-grid-line, rgba(255, 255, 255, 0.05));
   box-sizing: border-box;
+}
+
+:global([data-theme="light"]) .gridContent {
+  border-left-color: var(--card-border-line, rgba(0, 0, 0, 0.12));
+}
+
+:global([data-theme="light"]) .gridRow {
+  border-bottom-color: var(--card-grid-line, rgba(0, 0, 0, 0.08));
 }
 
 /* Hide the last row's border */
