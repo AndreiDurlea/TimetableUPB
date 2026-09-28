@@ -40,7 +40,7 @@ interface HierarchyResponse {
   } | null;
 }
 
-const SELECTION_STORAGE_KEY = 'profile_selection';
+import { getStoredSelectionRaw, saveStoredSelection, SELECTION_STORAGE_KEY } from '../../utils/selectionStorage.ts';
 
 const DEFAULT_SELECTION: Selection = {
   facultyId: '',
@@ -70,7 +70,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
       return DEFAULT_SELECTION;
     }
     try {
-      const saved = localStorage.getItem(SELECTION_STORAGE_KEY);
+      const saved = getStoredSelectionRaw();
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
@@ -126,10 +126,10 @@ export const useProfileForm = (isProfilePage: boolean) => {
             setSelection(dbSelection);
             setIsDirty(false);
           } else {
-            const saved = localStorage.getItem(SELECTION_STORAGE_KEY);
+            const saved = getStoredSelectionRaw();
             if (!saved) {
               setSelection(dbSelection);
-              localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(dbSelection));
+              saveStoredSelection(dbSelection);
             }
           }
         }
@@ -311,6 +311,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
     }
 
     setStatus('Profile Saved!');
+    saveStoredSelection(selection);
     setOriginalSelection(selection);
     setIsDirty(false);
     setConflictingManualClasses([]);
@@ -347,12 +348,16 @@ export const useProfileForm = (isProfilePage: boolean) => {
       }
 
       if (!isProfilePage) {
-        localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
-        window.dispatchEvent(new Event('profile_selection_changed'));
+        if (!user) {
+          saveStoredSelection(newSelection);
+        } else {
+          localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
+          window.dispatchEvent(new Event('profile_selection_changed'));
+        }
       }
       return newSelection;
     });
-  }, [isProfilePage, options.series]);
+  }, [isProfilePage, options.series, user]);
 
   useEffect(() => {
     supabase.from('faculties').select('*').then(({ data }) => {
@@ -446,12 +451,16 @@ export const useProfileForm = (isProfilePage: boolean) => {
       }
       
       if (changed && !isProfilePage) {
-        localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
-        window.dispatchEvent(new Event('profile_selection_changed'));
+        if (!user) {
+          saveStoredSelection(newSelection);
+        } else {
+          localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
+          window.dispatchEvent(new Event('profile_selection_changed'));
+        }
       }
       return changed ? newSelection : currentSelection;
     });
-  }, [options, isProfilePage, availableYears]);
+  }, [options, isProfilePage, availableYears, user]);
 
   const availableSeriesForYear = useMemo(() => {
     if (!selection.year) {

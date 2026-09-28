@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useAuth } from '../auth/useAuth.ts';
-
-const SELECTION_STORAGE_KEY = 'profile_selection';
+import { getStoredSelectionRaw } from '../../utils/selectionStorage.ts';
 
 const subscribe = (callback: () => void) => {
   window.addEventListener('profile_selection_changed', callback);
@@ -14,7 +13,7 @@ const subscribe = (callback: () => void) => {
 
 const getLocalStorageSnapshot = (): string => {
   try {
-    const raw = localStorage.getItem(SELECTION_STORAGE_KEY);
+    const raw = getStoredSelectionRaw();
     if (!raw) return '';
     const parsed = JSON.parse(raw);
     return parsed?.subgroupId || '';

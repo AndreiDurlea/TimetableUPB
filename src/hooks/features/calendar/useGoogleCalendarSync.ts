@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { supabase } from '../../../lib/supabase';
+import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
 import {
   type DetailedClass,
   type SyncMetadata,
@@ -53,7 +54,7 @@ export const useGoogleCalendarSync = () => {
 
     if (!targetSubgroupId) {
       try {
-        const saved = localStorage.getItem('profile_selection');
+        const saved = getStoredSelectionRaw();
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && parsed.subgroupId) {

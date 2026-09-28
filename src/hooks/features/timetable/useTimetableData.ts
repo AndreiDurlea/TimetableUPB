@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../auth/useAuth';
 import type { Database } from '../../../lib/database.types';
+import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
 
-const SELECTION_STORAGE_KEY = 'profile_selection';
 const TIMETABLE_CACHE_PREFIX = 'timetable_cache_';
 const LATEST_CACHE_KEY = 'timetable_cache_latest';
 
@@ -181,7 +181,7 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
             let targetSubgroupId = tempSubgroupId;
 
             if (!user && !targetSubgroupId) {
-                const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+                const savedSelectionRaw = getStoredSelectionRaw();
                 if (savedSelectionRaw) {
                     try {
                         const savedSelection = JSON.parse(savedSelectionRaw);

@@ -8,8 +8,7 @@ import { useWeekLabels } from '../../../hooks/features/timetable/useWeekLabels';
 import { getSemesterWeek, isEvenWeek, getWeekLabel, SEMESTER_START } from '../../../utils/semesterUtils';
 import TimetableSelectionModal from './TimetableSelectionModal';
 import TimetableHeader from './TimetableHeader';
-
-const SELECTION_STORAGE_KEY = 'profile_selection';
+import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
 
 const DayCardGrid: React.FC = () => {
     const { user, loading } = useAuth();
@@ -27,6 +26,7 @@ const DayCardGrid: React.FC = () => {
     const [tempSubgroupId, setTempSubgroupId] = useState<string | null>(null);
     const [isSelectionForced, setIsSelectionForced] = useState(false);
     const authInitializedRef = useRef(false);
+    const prevUserRef = useRef<any>(undefined);
     
     const { classes, classesLoading, hierarchyString } = useTimetableData(tempSubgroupId);
     useWeekLabels(gridRef, containerRef, separatorRef, label1Ref, label2Ref);
@@ -43,7 +43,7 @@ const DayCardGrid: React.FC = () => {
 
         let savedSubgroupId: string | null = null;
         try {
-            const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+            const savedSelectionRaw = getStoredSelectionRaw();
             if (savedSelectionRaw) {
                 const parsed = JSON.parse(savedSelectionRaw);
                 if (parsed && typeof parsed === 'object' && parsed.subgroupId) {
@@ -58,11 +58,15 @@ const DayCardGrid: React.FC = () => {
         if (fromShare) {
             sessionStorage.removeItem('fromShare');
             setTempSubgroupId(savedSubgroupId);
+            prevUserRef.current = user;
             return;
         }
 
-        if (!authInitializedRef.current) {
+        const userChanged = prevUserRef.current !== undefined && prevUserRef.current !== user;
+        if (!authInitializedRef.current || userChanged) {
             authInitializedRef.current = true;
+            prevUserRef.current = user;
+
             if (user) {
                 setTempSubgroupId(null);
                 setShowModal(false);
@@ -217,7 +221,7 @@ const DayCardGrid: React.FC = () => {
     const handleModalSubmit = (selectedSubgroupId?: string) => {
         let subgroupId = selectedSubgroupId;
         if (!subgroupId) {
-            const savedSelectionRaw = localStorage.getItem(SELECTION_STORAGE_KEY);
+            const savedSelectionRaw = getStoredSelectionRaw();
             if (savedSelectionRaw) {
                 try {
                     const parsed = JSON.parse(savedSelectionRaw);
