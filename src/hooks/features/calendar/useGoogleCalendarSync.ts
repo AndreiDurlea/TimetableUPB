@@ -31,6 +31,7 @@ export const useGoogleCalendarSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgressMessage, setSyncProgressMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [autoSyncAuthFailed, setAutoSyncAuthFailed] = useState(false);
   const [syncMetadata, setSyncMetadata] = useState<SyncMetadata | null>(() => {
     return user ? getStoredSyncMetadata(user.id) : null;
   });
@@ -255,22 +256,27 @@ export const useGoogleCalendarSync = () => {
     return enrolledClasses.map(c => c.id).filter((id): id is string => Boolean(id)).sort();
   }, [enrolledClasses]);
 
+  const currentClassIdsKey = useMemo(() => currentClassIds.join(','), [currentClassIds]);
+
+  useEffect(() => {
+    setAutoSyncAuthFailed(false);
+  }, [currentClassIdsKey]);
+
+  const isLinked = Boolean(syncMetadata?.calendarId);
+
   const isOutOfSync = useMemo(() => {
     if (!syncMetadata || !syncMetadata.syncedClassIds) return false;
-    const syncedIds = [...syncMetadata.syncedClassIds].sort();
-    if (syncedIds.length !== currentClassIds.length) return true;
-    for (let i = 0; i < currentClassIds.length; i++) {
-      if (currentClassIds[i] !== syncedIds[i]) return true;
-    }
-    return false;
-  }, [syncMetadata, currentClassIds]);
+    const syncedKey = [...syncMetadata.syncedClassIds].sort().join(',');
+    return syncedKey !== currentClassIdsKey;
+  }, [syncMetadata, currentClassIdsKey]);
 
   const syncStatus: SyncStatus = useMemo(() => {
     if (isSyncing) return 'syncing';
-    if (!syncMetadata || !syncMetadata.syncedClassIds) return 'not_synced';
-    if (isOutOfSync) return 'not_synced';
+    if (!isLinked) return 'not_synced';
+    if (autoSyncAuthFailed) return 'not_synced';
+    if (isOutOfSync) return 'syncing';
     return 'in_sync';
-  }, [isSyncing, syncMetadata, isOutOfSync]);
+  }, [isSyncing, isLinked, autoSyncAuthFailed, isOutOfSync]);
 
   const executeSync = useCallback(async (forcedToken?: string, isUserInitiated = false) => {
     if (!user) return;
@@ -314,6 +320,7 @@ export const useGoogleCalendarSync = () => {
           setSyncProgressMessage('Redirecting to Google authorization...');
           await initiateGoogleOAuth('sync_google=1');
         } else {
+          setAutoSyncAuthFailed(true);
           setErrorMessage('Google Calendar authorization required to auto-sync.');
         }
         return;
@@ -345,10 +352,14 @@ export const useGoogleCalendarSync = () => {
 
       saveSyncMetadata(user.id, newMetadata);
       setSyncMetadata(newMetadata);
+      setAutoSyncAuthFailed(false);
       setSyncProgressMessage('');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown sync error occurred.';
       console.error('Google Calendar sync failed:', err);
+      if (!isUserInitiated) {
+        setAutoSyncAuthFailed(true);
+      }
       setErrorMessage(message);
     } finally {
       setIsSyncing(false);
@@ -356,6 +367,7 @@ export const useGoogleCalendarSync = () => {
   }, [user, profile?.subgroup_id, enrolledClasses, currentClassIds]);
 
   const syncNow = useCallback(async (forcedToken?: string, isUserInitiated = true) => {
+    setAutoSyncAuthFailed(false);
     return executeSync(forcedToken, isUserInitiated);
   }, [executeSync]);
 
@@ -368,6 +380,7 @@ export const useGoogleCalendarSync = () => {
       const calendarId = syncMetadata?.calendarId || null;
       await unlinkGoogleCalendar(user.id, token, calendarId);
       setSyncMetadata(null);
+      setAutoSyncAuthFailed(false);
     } catch (err) {
       console.error('Failed to unlink Google Calendar:', err);
     } finally {
@@ -377,7 +390,7 @@ export const useGoogleCalendarSync = () => {
   }, [user, syncMetadata]);
 
   useEffect(() => {
-    if (!user || !syncMetadata || !isOutOfSync || loadingEnrollments || isSyncing) {
+    if (!user || !isLinked || !isOutOfSync || loadingEnrollments || isSyncing || autoSyncAuthFailed) {
       return;
     }
 
@@ -394,7 +407,7 @@ export const useGoogleCalendarSync = () => {
         clearTimeout(autoSyncTimerRef.current);
       }
     };
-  }, [user, syncMetadata, isOutOfSync, loadingEnrollments, isSyncing, executeSync]);
+  }, [user, isLinked, isOutOfSync, loadingEnrollments, isSyncing, autoSyncAuthFailed, executeSync]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
