@@ -134,7 +134,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
               value={selection.seriesId}
               onChange={(val) => handleSelectChange('seriesId', val)}
               options={availableSeriesForYear.map(s => ({ id: s.id, label: s.name.replace(/^[0-9]+/, '') || s.name }))}
-              disabled={!selection.year}
+              disabled={!selection.domainId}
               {...getFieldStatus('seriesId')}
               isChanged={getIsChanged('seriesId')}
           />

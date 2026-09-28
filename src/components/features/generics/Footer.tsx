@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/auth/useAuth.ts';
+import { useHasSelectedSchedule } from '../../../hooks/misc/useHasSelectedSchedule.ts';
 import { supabase } from '../../../lib/supabase.ts';
 import styles from './Footer.module.css';
 
@@ -23,6 +24,7 @@ const LockIcon = () => (
 
 const Footer: React.FC = () => {
   const { user, triggerRefresh } = useAuth();
+  const hasSelection = useHasSelectedSchedule();
 
   const handleLogin = async () => {
     await supabase.auth.signInWithOAuth({
@@ -69,11 +71,11 @@ const Footer: React.FC = () => {
               Logout
             </span>
           </>
-        ) : (
+        ) : hasSelection ? (
           <span className={styles.filterOption}>
             <span onClick={handleLogin} className={styles.link} style={{textDecoration: 'underline', cursor: 'pointer'}}>Login with Google</span> to edit enrollments
           </span>
-        )}
+        ) : null}
       </div>
     </footer>
   );

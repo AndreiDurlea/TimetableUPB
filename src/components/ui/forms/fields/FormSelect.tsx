@@ -40,7 +40,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
       </label>
       <select
         id={label}
-        value={value}
+        value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         className={`${styles.select} ${compact ? styles.selectCompact : ''} ${!value ? styles.selectPlaceholder : ''}`}

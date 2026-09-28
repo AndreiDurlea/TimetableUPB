@@ -69,8 +69,23 @@ export const useProfileForm = (isProfilePage: boolean) => {
     if (isProfilePage) {
       return DEFAULT_SELECTION;
     }
-    const saved = localStorage.getItem(SELECTION_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_SELECTION;
+    try {
+      const saved = localStorage.getItem(SELECTION_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          facultyId: parsed.facultyId || '',
+          domainId: parsed.domainId || '',
+          year: parsed.year || '',
+          seriesId: parsed.seriesId || '',
+          groupId: parsed.groupId || '',
+          subgroupId: parsed.subgroupId || '',
+        };
+      }
+    } catch {
+      return DEFAULT_SELECTION;
+    }
+    return DEFAULT_SELECTION;
   });
 
   const [originalSelection, setOriginalSelection] = useState<Selection>(DEFAULT_SELECTION);
@@ -311,16 +326,33 @@ export const useProfileForm = (isProfilePage: boolean) => {
         [name]: value,
         ...(name === 'facultyId' && { domainId: '', year: '', seriesId: '', groupId: '', subgroupId: '' }),
         ...(name === 'domainId' && { year: '', seriesId: '', groupId: '', subgroupId: '' }),
-        ...(name === 'year' && { seriesId: '', groupId: '', subgroupId: '' }),
         ...(name === 'seriesId' && { groupId: '', subgroupId: '' }),
         ...(name === 'groupId' && { subgroupId: '' }),
       };
+
+      if (name === 'year') {
+        const currentSeries = options.series.find(s => s.id === currentSelection.seriesId);
+        if (!currentSeries || !currentSeries.name.startsWith(value)) {
+          newSelection.seriesId = '';
+          newSelection.groupId = '';
+          newSelection.subgroupId = '';
+        }
+      }
+
+      if (name === 'seriesId' && value) {
+        const seriesObj = options.series.find(s => s.id === value);
+        if (seriesObj && /^[1-9]/.test(seriesObj.name)) {
+          newSelection.year = seriesObj.name.charAt(0);
+        }
+      }
+
       if (!isProfilePage) {
         localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
+        window.dispatchEvent(new Event('profile_selection_changed'));
       }
       return newSelection;
     });
-  }, [isProfilePage]);
+  }, [isProfilePage, options.series]);
 
   useEffect(() => {
     supabase.from('faculties').select('*').then(({ data }) => {
@@ -368,6 +400,16 @@ export const useProfileForm = (isProfilePage: boolean) => {
     }
   }, [selection.groupId]);
 
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    options.series.forEach(s => {
+      if (s.name && /^[1-9]/.test(s.name)) {
+        yearsSet.add(s.name.charAt(0));
+      }
+    });
+    return Array.from(yearsSet).sort();
+  }, [options.series]);
+
   useEffect(() => {
     setSelection(currentSelection => {
       let changed = false;
@@ -375,6 +417,19 @@ export const useProfileForm = (isProfilePage: boolean) => {
       if (options.faculties.length === 1 && !newSelection.facultyId) { newSelection.facultyId = options.faculties[0].id; changed = true; }
       if (options.domains.length === 1 && !newSelection.domainId) { newSelection.domainId = options.domains[0].id; changed = true; }
       if (options.series.length === 1 && !newSelection.seriesId) { newSelection.seriesId = options.series[0].id; changed = true; }
+
+      if (newSelection.seriesId && !newSelection.year && options.series.length > 0) {
+        const matchingSeries = options.series.find(s => s.id === newSelection.seriesId);
+        if (matchingSeries && /^[1-9]/.test(matchingSeries.name)) {
+          newSelection.year = matchingSeries.name.charAt(0);
+          changed = true;
+        }
+      }
+
+      if (newSelection.domainId && !newSelection.year && availableYears.length > 0) {
+        newSelection.year = availableYears[0];
+        changed = true;
+      }
 
       if (!isProfilePage) {
         if (options.groups.length > 0 && (!newSelection.groupId || !options.groups.some(g => g.id === newSelection.groupId))) {
@@ -392,25 +447,24 @@ export const useProfileForm = (isProfilePage: boolean) => {
       
       if (changed && !isProfilePage) {
         localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
+        window.dispatchEvent(new Event('profile_selection_changed'));
       }
       return changed ? newSelection : currentSelection;
     });
-  }, [options, isProfilePage]);
-
-  const availableYears = useMemo(() => {
-    const yearsSet = new Set<string>();
-    options.series.forEach(s => {
-      if (s.name && /^[1-9]/.test(s.name)) {
-        yearsSet.add(s.name.charAt(0));
-      }
-    });
-    return Array.from(yearsSet).sort();
-  }, [options.series]);
+  }, [options, isProfilePage, availableYears]);
 
   const availableSeriesForYear = useMemo(() => {
-    if (!selection.year) return [];
+    if (!selection.year) {
+      if (selection.seriesId) {
+        const found = options.series.find(s => s.id === selection.seriesId);
+        if (found && /^[1-9]/.test(found.name)) {
+          return options.series.filter(s => s.name.startsWith(found.name.charAt(0)));
+        }
+      }
+      return options.series;
+    }
     return options.series.filter(s => s.name.startsWith(selection.year));
-  }, [options.series, selection.year]);
+  }, [options.series, selection.year, selection.seriesId]);
 
   const getFieldStatus = (field: keyof Selection) => {
     const isChanged = isProfilePage && originalSelection ? selection[field] !== originalSelection[field] : false;

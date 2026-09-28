@@ -232,6 +232,7 @@ const DayCardGrid: React.FC = () => {
             setTempSubgroupId(subgroupId);
             setShowModal(false);
             setIsSelectionForced(false);
+            window.dispatchEvent(new Event('profile_selection_changed'));
         }
     };
 
