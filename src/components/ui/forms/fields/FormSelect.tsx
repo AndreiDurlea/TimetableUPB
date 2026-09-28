@@ -15,6 +15,7 @@ interface FormSelectProps {
   placeholder?: string;
   isChanged?: boolean;
   isPending?: boolean;
+  compact?: boolean;
 }
 
 const FormSelect: React.FC<FormSelectProps> = ({
@@ -26,6 +27,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
   placeholder,
   isChanged = false,
   isPending = false,
+  compact = false,
 }) => {
   return (
     <div className={styles.formGroup}>
@@ -41,7 +43,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className={`${styles.select} ${!value ? styles.selectPlaceholder : ''}`}
+        className={`${styles.select} ${compact ? styles.selectCompact : ''} ${!value ? styles.selectPlaceholder : ''}`}
       >
         <option value="" disabled>
           {placeholder || label}

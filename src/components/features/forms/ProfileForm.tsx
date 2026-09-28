@@ -30,7 +30,9 @@ const ArrowIcon = () => (
 const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, children }) => {
   const { 
     selection, 
-    options, 
+    options,
+    availableYears,
+    availableSeriesForYear,
     status, 
     handleSelectChange, 
     save, 
@@ -117,11 +119,22 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
           />
 
           <FormSelect
+              label="Year"
+              value={selection.year}
+              onChange={(val) => handleSelectChange('year', val)}
+              options={availableYears.map(y => ({ id: y, label: y }))}
+              disabled={!selection.domainId}
+              compact
+              {...getFieldStatus('year')}
+              isChanged={getIsChanged('year')}
+          />
+
+          <FormSelect
               label="Series"
               value={selection.seriesId}
               onChange={(val) => handleSelectChange('seriesId', val)}
-              options={options.series.map(s => ({ id: s.id, label: s.name }))}
-              disabled={!selection.domainId}
+              options={availableSeriesForYear.map(s => ({ id: s.id, label: s.name.replace(/^[0-9]+/, '') || s.name }))}
+              disabled={!selection.year}
               {...getFieldStatus('seriesId')}
               isChanged={getIsChanged('seriesId')}
           />

@@ -6,6 +6,7 @@ import FilterControls from './FilterControls.tsx';
 import ClassGrid from './ClassGrid.tsx';
 import Pagination from '../../ui/pagination/Pagination.tsx';
 import useResponsivePageSize from '../../../hooks/misc/useResponsivePageSize.ts';
+import { getClassStudyYear } from '../../../utils/styleUtils';
 import styles from './ClassSearch.module.css';
 
 const ClassSearch: React.FC = () => {
@@ -120,8 +121,13 @@ const ClassSearch: React.FC = () => {
         const query = searchTerm.trim().toLowerCase();
         if (!query) return [];
 
+        const userYear = userSeriesName && /^[1-9]/.test(userSeriesName) ? parseInt(userSeriesName.charAt(0), 10) : null;
         const source = (!searchOutsideSeries && userSeriesName)
-            ? allClasses.filter(c => c.series_name === userSeriesName || (!c.series_name && (!userFacultyId || c.resolved_faculty_id === userFacultyId)))
+            ? allClasses.filter(c => {
+                const cYear = getClassStudyYear(c);
+                if (cYear && userYear && cYear !== userYear) return false;
+                return c.series_name === userSeriesName || (!c.series_name && (!userFacultyId || c.resolved_faculty_id === userFacultyId));
+            })
             : allClasses;
 
         const seen = new Set<string>();
