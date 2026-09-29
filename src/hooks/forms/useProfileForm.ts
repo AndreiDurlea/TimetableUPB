@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabase.ts';
 import { useAuth } from '../auth/useAuth.ts';
 import type { Database } from '../../lib/database.types.ts';
+import { getClassStudyYear } from '../../utils/styleUtils.ts';
 
 type Class = Database['public']['Tables']['classes']['Row'];
 type Faculty = Database['public']['Tables']['faculties']['Row'];
@@ -301,6 +302,23 @@ export const useProfileForm = (isProfilePage: boolean) => {
     if (conflictingManualClasses.length > 0) {
       const idsToDelete = conflictingManualClasses.map(c => c.id);
       await supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', idsToDelete);
+    }
+
+    if (manualClassIds.length > 0) {
+      const { data: manualDetailed } = await supabase.from('detailed_classes').select('*').in('id', manualClassIds);
+      if (manualDetailed) {
+        const targetYear = selection.year ? parseInt(selection.year, 10) : null;
+        const mismatchedManualIds: string[] = [];
+        for (const cls of manualDetailed) {
+          const cy = getClassStudyYear(cls);
+          if (targetYear !== null && cy !== null && cy !== targetYear) {
+            if (cls.id) mismatchedManualIds.push(cls.id);
+          }
+        }
+        if (mismatchedManualIds.length > 0) {
+          await supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
+        }
+      }
     }
 
     const { data: removedClasses } = await supabase.from('user_removed_classes').select('class_id').eq('user_id', user.id);

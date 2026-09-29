@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
+import { getClassStudyYear } from '../../../utils/styleUtils';
 import {
   type DetailedClass,
   type SyncMetadata,
@@ -127,26 +128,74 @@ export const useGoogleCalendarSync = () => {
         p_subgroup_id: targetSubgroupId as string,
       });
 
-      let classIds = (relevantClasses || []).map((c: RelevantClass) => c.id);
+      const defaultIds = (relevantClasses || []).map((c: RelevantClass) => c.id).filter(Boolean);
 
-      const { data: manualEnrollments } = await supabase
-        .from('user_classes')
-        .select('class_id')
-        .eq('user_id', user.id);
+      const [manualRes, removedRes] = await Promise.all([
+        supabase.from('user_classes').select('class_id').eq('user_id', user.id),
+        supabase.from('user_removed_classes').select('class_id').eq('user_id', user.id),
+      ]);
 
-      const { data: removedClasses } = await supabase
-        .from('user_removed_classes')
-        .select('class_id')
-        .eq('user_id', user.id);
+      const manualIds = manualRes.data?.map(r => r.class_id).filter((id): id is string => Boolean(id)) || [];
+      const removedIds = removedRes.data?.map(r => r.class_id).filter((id): id is string => Boolean(id)) || [];
 
-      const manualIds = manualEnrollments?.map(r => r.class_id).filter((id): id is string => id !== null) || [];
-      const removedIds = removedClasses?.map(r => r.class_id).filter((id): id is string => id !== null) || [];
+      let manualClasses: DetailedClass[] = [];
+      if (manualIds.length > 0) {
+        const { data: manualData } = await supabase.from('detailed_classes').select('*').in('id', manualIds);
+        if (manualData) manualClasses = manualData as DetailedClass[];
+      }
 
-      classIds = classIds.filter(id => !removedIds.includes(id));
-      classIds = Array.from(new Set([...classIds, ...manualIds]));
+      let defaultClasses: DetailedClass[] = [];
+      if (defaultIds.length > 0) {
+        const { data: defaultData } = await supabase.from('detailed_classes').select('*').in('id', defaultIds);
+        if (defaultData) defaultClasses = defaultData as DetailedClass[];
+      }
+
+      const activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
+      if (activeYear !== null) {
+        const mismatchedManualIds: string[] = [];
+        manualClasses = manualClasses.filter(c => {
+          const cy = getClassStudyYear(c);
+          if (cy !== null && cy !== activeYear) {
+            if (c.id) mismatchedManualIds.push(c.id);
+            return false;
+          }
+          return true;
+        });
+
+        if (mismatchedManualIds.length > 0 && user) {
+          void supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
+        }
+      }
+
+      const conflictingDefaultIds = new Set<string>();
+      for (const manual of manualClasses) {
+        if (!manual.start_time || !manual.end_time || !manual.day_of_week) continue;
+        const manualStart = new Date(`1970-01-01T${manual.start_time}`);
+        const manualEnd = new Date(`1970-01-01T${manual.end_time}`);
+
+        for (const def of defaultClasses) {
+          if (!def.start_time || !def.end_time || def.day_of_week !== manual.day_of_week) continue;
+          const defStart = new Date(`1970-01-01T${def.start_time}`);
+          const defEnd = new Date(`1970-01-01T${def.end_time}`);
+
+          if (manualStart < defEnd && manualEnd > defStart) {
+            const freq1 = manual.frequency;
+            const freq2 = def.frequency;
+            if (freq1 === 'weekly' || freq2 === 'weekly' || freq1 === freq2) {
+              if (def.id) conflictingDefaultIds.add(def.id);
+            }
+          }
+        }
+      }
+
+      const finalDefaults = defaultClasses.filter(
+        c => c.id && !removedIds.includes(c.id) && !conflictingDefaultIds.has(c.id)
+      );
+
+      const finalClasses = [...finalDefaults, ...manualClasses];
 
       const isMock = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
-      if (classIds.length === 0 && isMock) {
+      if (finalClasses.length === 0 && isMock) {
         setEnrolledClasses([
           {
             id: 'mock-class-1',
@@ -188,15 +237,8 @@ export const useGoogleCalendarSync = () => {
             room_index: '105',
           },
         ] as DetailedClass[]);
-      } else if (classIds.length === 0) {
-        setEnrolledClasses([]);
       } else {
-        const { data: detailedClasses } = await supabase
-          .from('detailed_classes')
-          .select('*')
-          .in('id', classIds);
-
-        setEnrolledClasses((detailedClasses as DetailedClass[]) || []);
+        setEnrolledClasses(finalClasses);
       }
     } catch (err) {
       console.error('Error fetching enrolled classes for calendar sync:', err);
@@ -300,6 +342,17 @@ export const useGoogleCalendarSync = () => {
       if (!accessResult.ok && isMockMode) {
         token = 'mock_valid_google_token';
         accessResult = { ok: true };
+      }
+
+      if (!accessResult.ok && !isMockMode) {
+        try {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (!error && data?.session?.provider_token) {
+            token = data.session.provider_token;
+            localStorage.setItem('google_provider_token', token);
+            accessResult = await testGoogleCalendarAccess(token);
+          }
+        } catch {}
       }
 
       if (!token || !accessResult.ok) {

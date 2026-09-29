@@ -84,6 +84,21 @@ export const useClassSearch = () => {
         }
 
         const defaultClasses = (defaultClassesData || []) as DetailedClass[];
+        const activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
+        if (activeYear !== null) {
+            const mismatchedManualIds: string[] = [];
+            manualClasses = manualClasses.filter(c => {
+                const cy = getClassStudyYear(c);
+                if (cy !== null && cy !== activeYear) {
+                    if (c.id) mismatchedManualIds.push(c.id);
+                    return false;
+                }
+                return true;
+            });
+            if (mismatchedManualIds.length > 0 && user) {
+                void supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
+            }
+        }
         const conflictingDefaultClassIds = new Set<string>();
 
         for (const manual of manualClasses) {

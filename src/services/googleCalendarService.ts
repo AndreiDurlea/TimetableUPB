@@ -207,7 +207,6 @@ export const initiateGoogleOAuth = async (returnQueryParam = 'sync_google=1'): P
       redirectTo: redirectUrl.toString(),
       queryParams: {
         access_type: 'offline',
-        prompt: 'consent',
       },
     },
   });
@@ -283,6 +282,7 @@ export const fetchCalendarEvents = async (
   do {
     const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     url.searchParams.set('maxResults', '250');
+    url.searchParams.set('showDeleted', 'false');
     if (pageToken) {
       url.searchParams.set('pageToken', pageToken);
     }
@@ -322,19 +322,27 @@ const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
 
 export const clearCalendarEvents = async (token: string, calendarId: string): Promise<void> => {
   const items = await fetchCalendarEvents(token, calendarId);
-  await Promise.all(
-    items.map(event =>
-      fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(event.id)}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+  const BATCH_SIZE = 4;
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (event) => {
+        try {
+          await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(event.id)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        } catch (err) {
+          console.warn(`Failed to clear event ${event.id}:`, err);
         }
-      )
-    )
-  );
+      })
+    );
+  }
 };
 
 const getClassColorId = (classType: string | null | undefined): string => {
@@ -346,14 +354,24 @@ const getClassColorId = (classType: string | null | undefined): string => {
   return '9';
 };
 
+const formatExDate = (d: Date, timeStr: string): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const cleanTime = timeStr.slice(0, 5).replace(':', '');
+  return `${y}${m}${day}T${cleanTime}00`;
+};
+
 const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null => {
   if (!cls.id || !cls.day_of_week || !cls.start_time || !cls.end_time) {
     return null;
   }
 
   const dayOfWeek = cls.day_of_week;
-  const isEvenFrequency = cls.frequency?.toLowerCase() === 'even';
-  const isOddFrequency = cls.frequency?.toLowerCase() === 'odd';
+  const freq = (cls.frequency || '').toLowerCase();
+  const isEvenFrequency = freq === 'even';
+  const isOddFrequency = freq === 'odd';
   const isBiweekly = isEvenFrequency || isOddFrequency;
 
   const baseDay = isEvenFrequency ? 28 + 7 : 28;
@@ -384,13 +402,44 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
     cls.frequency ? `Frecvență: ${cls.frequency}` : null,
   ].filter(Boolean);
 
-  const recurrenceRule = isBiweekly
-    ? 'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20270123T000000Z'
-    : 'RRULE:FREQ=WEEKLY;UNTIL=20270123T000000Z';
+  let recurrence: string[];
+
+  if (!isBiweekly) {
+    const breakW1 = new Date(2026, 11, 21 + (dayOfWeek - 1));
+    const breakW2 = new Date(2026, 11, 28 + (dayOfWeek - 1));
+    const breakW3 = new Date(2027, 0, 4 + (dayOfWeek - 1));
+
+    const exDateStr = [
+      formatExDate(breakW1, startTimeClean),
+      formatExDate(breakW2, startTimeClean),
+      formatExDate(breakW3, startTimeClean),
+    ].join(',');
+
+    recurrence = [
+      'RRULE:FREQ=WEEKLY;UNTIL=20270123T000000Z',
+      `EXDATE;TZID=Europe/Bucharest:${exDateStr}`,
+    ];
+  } else if (isOddFrequency) {
+    const week13Date = new Date(2027, 0, 11 + (dayOfWeek - 1));
+    const rDateStr = formatExDate(week13Date, startTimeClean);
+
+    recurrence = [
+      'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20261219T000000Z',
+      `RDATE;TZID=Europe/Bucharest:${rDateStr}`,
+    ];
+  } else {
+    const week14Date = new Date(2027, 0, 18 + (dayOfWeek - 1));
+    const rDateStr = formatExDate(week14Date, startTimeClean);
+
+    recurrence = [
+      'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20261219T000000Z',
+      `RDATE;TZID=Europe/Bucharest:${rDateStr}`,
+    ];
+  }
 
   return {
     summary,
-    description: `${descLines.join('\n')}\n[class_id:${cls.id}]`,
+    description: descLines.join('\n'),
     location,
     colorId: getClassColorId(cls.class_type),
     start: {
@@ -401,7 +450,7 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
       dateTime: endDateTime,
       timeZone: 'Europe/Bucharest',
     },
-    recurrence: [recurrenceRule],
+    recurrence,
     extendedProperties: {
       private: {
         classId: cls.id,
@@ -422,7 +471,8 @@ export const diffSyncClassesToGoogleCalendar = async (
 
   for (const event of existingEvents) {
     const classId = getClassIdFromEvent(event);
-    if (!classId) {
+    const hasLegacyDesc = Boolean(event.description && event.description.includes('[class_id:'));
+    if (!classId || hasLegacyDesc) {
       toDeleteEventIds.push(event.id);
     } else if (existingMap.has(classId)) {
       toDeleteEventIds.push(event.id);
@@ -431,7 +481,7 @@ export const diffSyncClassesToGoogleCalendar = async (
     }
   }
 
-  const desiredClassIds = new Set(classes.map(c => c.id));
+  const desiredClassIds = new Set(classes.map(c => c.id).filter(Boolean));
 
   for (const [classId, eventId] of existingMap.entries()) {
     if (!desiredClassIds.has(classId)) {
@@ -444,39 +494,61 @@ export const diffSyncClassesToGoogleCalendar = async (
     (cls): cls is DetailedClass & { id: string } => Boolean(cls.id && !existingMap.has(cls.id))
   );
 
-  const deletePromises = toDeleteEventIds.map(eventId =>
-    fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
-  );
+  const BATCH_SIZE = 4;
 
-  const addPromises = toAddClasses.map(async (cls) => {
-    const payload = buildEventPayload(cls);
-    if (!payload) return;
-    const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      }
+  for (let i = 0; i < toDeleteEventIds.length; i += BATCH_SIZE) {
+    const batch = toDeleteEventIds.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (eventId) => {
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          if (!res.ok && res.status !== 404 && res.status !== 410) {
+            console.warn(`Failed to delete event ${eventId}:`, res.status);
+          }
+        } catch (err) {
+          console.warn(`Error deleting event ${eventId}:`, err);
+        }
+      })
     );
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.warn(`Failed to insert class event ${cls.name}:`, errorText);
-    }
-  });
+  }
 
-  await Promise.all([...deletePromises, ...addPromises]);
+  for (let i = 0; i < toAddClasses.length; i += BATCH_SIZE) {
+    const batch = toAddClasses.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (cls) => {
+        const payload = buildEventPayload(cls);
+        if (!payload) return;
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.warn(`Failed to insert class event ${cls.name}:`, errorText);
+          }
+        } catch (err) {
+          console.warn(`Error inserting class event ${cls.name}:`, err);
+        }
+      })
+    );
+  }
+
   return classes.length;
 };
 
