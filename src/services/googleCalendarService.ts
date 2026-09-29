@@ -131,24 +131,6 @@ export const extractAndStoreTokens = async (): Promise<string | null> => {
     }
   }
 
-  if (typeof window !== 'undefined' && window.location.search) {
-    const searchParams = new URLSearchParams(window.location.search);
-    const code = searchParams.get('code');
-    if (code) {
-      try {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error && data?.session?.provider_token) {
-          localStorage.setItem(TOKEN_KEY, data.session.provider_token);
-          if (data.session.provider_refresh_token) {
-            localStorage.setItem('google_provider_refresh_token', data.session.provider_refresh_token);
-          }
-          return data.session.provider_token;
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
 
   try {
     const { data: { session } } = await supabase.auth.getSession();

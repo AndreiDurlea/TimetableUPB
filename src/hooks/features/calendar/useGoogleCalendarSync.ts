@@ -156,21 +156,30 @@ export const useGoogleCalendarSync = () => {
         if (defaultData) defaultClasses = defaultData as DetailedClass[];
       }
 
-      const activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
+      const yearCounts: Record<number, number> = {};
+      for (const c of defaultClasses) {
+        if (c.series_name && /^[1-9]/.test(c.series_name)) {
+          const y = parseInt(c.series_name.charAt(0), 10);
+          yearCounts[y] = (yearCounts[y] || 0) + 1;
+        }
+      }
+      let activeYear: number | null = null;
+      let maxCount = 0;
+      for (const [yStr, count] of Object.entries(yearCounts)) {
+        if (count > maxCount) {
+          maxCount = count;
+          activeYear = parseInt(yStr, 10);
+        }
+      }
+      if (activeYear === null) {
+        activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
+      }
+
       if (activeYear !== null) {
-        const mismatchedManualIds: string[] = [];
         manualClasses = manualClasses.filter(c => {
           const cy = getClassStudyYear(c);
-          if (cy !== null && cy !== activeYear) {
-            if (c.id) mismatchedManualIds.push(c.id);
-            return false;
-          }
-          return true;
+          return cy === null || cy === activeYear;
         });
-
-        if (mismatchedManualIds.length > 0 && user) {
-          void supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
-        }
       }
 
       const conflictingDefaultIds = new Set<string>();
