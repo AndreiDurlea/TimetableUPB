@@ -84,21 +84,6 @@ export const useClassSearch = () => {
         }
 
         const defaultClasses = (defaultClassesData || []) as DetailedClass[];
-        const activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
-        if (activeYear !== null) {
-            const mismatchedManualIds: string[] = [];
-            manualClasses = manualClasses.filter(c => {
-                const cy = getClassStudyYear(c);
-                if (cy !== null && cy !== activeYear) {
-                    if (c.id) mismatchedManualIds.push(c.id);
-                    return false;
-                }
-                return true;
-            });
-            if (mismatchedManualIds.length > 0 && user) {
-                void supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
-            }
-        }
         const conflictingDefaultClassIds = new Set<string>();
 
         for (const manual of manualClasses) {
@@ -191,14 +176,22 @@ export const useClassSearch = () => {
 
         try {
             if (action === 'add') {
-                const { error } = await supabase.from('user_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                const { error } = await supabase.from('user_classes').upsert(
+                    [{ user_id: user.id, class_id: cls.id }],
+                    { onConflict: 'user_id,class_id' }
+                );
                 if (error) throw error;
+                await supabase.from('user_removed_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
             } else if (action === 'remove_manual') {
                 const { error } = await supabase.from('user_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
                 if (error) throw error;
             } else if (action === 'remove_default') {
-                const { error } = await supabase.from('user_removed_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                const { error } = await supabase.from('user_removed_classes').upsert(
+                    [{ user_id: user.id, class_id: cls.id }],
+                    { onConflict: 'user_id,class_id' }
+                );
                 if (error) throw error;
+                await supabase.from('user_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
             } else if (action === 're_add_default') {
                 const { error } = await supabase.from('user_removed_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
                 if (error) throw error;
