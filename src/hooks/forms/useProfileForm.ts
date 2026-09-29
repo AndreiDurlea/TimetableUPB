@@ -333,8 +333,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
     setOriginalSelection(selection);
     setIsDirty(false);
     setConflictingManualClasses([]);
-    triggerRefresh();
     await revalidateProfile();
+    triggerRefresh();
     setTimeout(() => setStatus(''), 2000);
   }, [user, selection, conflictingManualClasses, triggerRefresh, revalidateProfile]);
 

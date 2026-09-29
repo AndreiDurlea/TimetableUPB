@@ -20,6 +20,7 @@ export interface SyncMetadata {
   calendarId: string;
   calendarName: string;
   syncedClassIds: string[];
+  syncedFingerprint?: string;
   syncedAt: number;
   syncedCount: number;
   userSubgroupId: string | null;
@@ -41,6 +42,7 @@ export interface GoogleCalendarEventInput {
   recurrence?: string[];
   extendedProperties?: {
     private?: Record<string, string>;
+    shared?: Record<string, string>;
   };
 }
 
@@ -63,11 +65,18 @@ export const getStoredSyncMetadata = (userId: string, userMetadata?: Record<stri
 
   try {
     const raw = localStorage.getItem(getSyncStorageKey(userId));
-    if (!raw) return null;
-    return JSON.parse(raw) as SyncMetadata;
-  } catch {
-    return null;
-  }
+    if (raw) return JSON.parse(raw) as SyncMetadata;
+  } catch {}
+
+  try {
+    const fallbackRaw = localStorage.getItem('google_calendar_sync');
+    if (fallbackRaw) {
+      const parsed = JSON.parse(fallbackRaw) as SyncMetadata;
+      if (parsed && parsed.calendarId) return parsed;
+    }
+  } catch {}
+
+  return null;
 };
 
 export const saveSyncMetadata = async (userId: string, data: SyncMetadata): Promise<void> => {
@@ -220,25 +229,31 @@ interface CalendarListResponse {
 }
 
 
-export const findOrCreateCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string> => {
-  const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export const findExistingCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string | null> => {
+  try {
+    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  if (!listRes.ok) {
-    const errorText = await listRes.text();
-    throw new Error(`Failed to list Google Calendars: ${listRes.status} ${errorText}`);
+    if (!listRes.ok) return null;
+
+    const listData = (await listRes.json()) as CalendarListResponse;
+    const existingCalendar = listData.items?.find(
+      cal => cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
+    );
+
+    return existingCalendar?.id || null;
+  } catch {
+    return null;
   }
+};
 
-  const listData = (await listRes.json()) as CalendarListResponse;
-  const existingCalendar = listData.items?.find(
-    cal => cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
-  );
-
-  if (existingCalendar?.id) {
-    return existingCalendar.id;
+export const findOrCreateCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string> => {
+  const existingId = await findExistingCalendar(token, title);
+  if (existingId) {
+    return existingId;
   }
 
   const createRes = await fetch('https://www.googleapis.com/calendar/v3/calendars', {
@@ -263,12 +278,18 @@ export const findOrCreateCalendar = async (token: string, title = DEFAULT_CALEND
   return createdData.id;
 };
 
-interface CalendarEventItem {
+export interface CalendarEventItem {
   id: string;
   summary?: string;
   description?: string;
+  location?: string;
+  start?: { dateTime?: string; timeZone?: string };
+  end?: { dateTime?: string; timeZone?: string };
+  recurrence?: string[];
+  colorId?: string;
   extendedProperties?: {
     private?: Record<string, string>;
+    shared?: Record<string, string>;
   };
 }
 
@@ -309,7 +330,10 @@ export const fetchCalendarEvents = async (
   return events;
 };
 
-const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
+export const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
+  if (event.extendedProperties?.shared?.classId) {
+    return event.extendedProperties.shared.classId;
+  }
   if (event.extendedProperties?.private?.classId) {
     return event.extendedProperties.private.classId;
   }
@@ -455,8 +479,24 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
       private: {
         classId: cls.id,
       },
+      shared: {
+        classId: cls.id,
+      },
     },
   };
+};
+
+const hasEventChanged = (existing: CalendarEventItem, payload: GoogleCalendarEventInput): boolean => {
+  if ((existing.summary || '') !== (payload.summary || '')) return true;
+  if ((existing.location || '') !== (payload.location || '')) return true;
+  if ((existing.description || '') !== (payload.description || '')) return true;
+  if ((existing.colorId || '') !== (payload.colorId || '')) return true;
+  if (existing.start?.dateTime !== payload.start.dateTime) return true;
+  if (existing.end?.dateTime !== payload.end.dateTime) return true;
+  const existingRec = (existing.recurrence || []).join(';');
+  const payloadRec = (payload.recurrence || []).join(';');
+  if (existingRec !== payloadRec) return true;
+  return false;
 };
 
 export const diffSyncClassesToGoogleCalendar = async (
@@ -467,6 +507,7 @@ export const diffSyncClassesToGoogleCalendar = async (
   const existingEvents = await fetchCalendarEvents(token, calendarId);
 
   const existingMap = new Map<string, string>();
+  const existingEventMap = new Map<string, CalendarEventItem>();
   const toDeleteEventIds: string[] = [];
 
   for (const event of existingEvents) {
@@ -478,6 +519,7 @@ export const diffSyncClassesToGoogleCalendar = async (
       toDeleteEventIds.push(event.id);
     } else {
       existingMap.set(classId, event.id);
+      existingEventMap.set(classId, event);
     }
   }
 
@@ -487,12 +529,28 @@ export const diffSyncClassesToGoogleCalendar = async (
     if (!desiredClassIds.has(classId)) {
       toDeleteEventIds.push(eventId);
       existingMap.delete(classId);
+      existingEventMap.delete(classId);
     }
   }
 
-  const toAddClasses = classes.filter(
-    (cls): cls is DetailedClass & { id: string } => Boolean(cls.id && !existingMap.has(cls.id))
-  );
+  const toAddClasses: DetailedClass[] = [];
+  const toUpdateEvents: Array<{ eventId: string; payload: GoogleCalendarEventInput; name: string }> = [];
+
+  for (const cls of classes) {
+    if (!cls.id) continue;
+    const payload = buildEventPayload(cls);
+    if (!payload) continue;
+
+    const eventId = existingMap.get(cls.id);
+    if (!eventId) {
+      toAddClasses.push(cls);
+    } else {
+      const existingEvent = existingEventMap.get(cls.id);
+      if (existingEvent && hasEventChanged(existingEvent, payload)) {
+        toUpdateEvents.push({ eventId, payload, name: cls.name || cls.shorthand || 'Class' });
+      }
+    }
+  }
 
   const BATCH_SIZE = 4;
 
@@ -515,6 +573,49 @@ export const diffSyncClassesToGoogleCalendar = async (
           }
         } catch (err) {
           console.warn(`Error deleting event ${eventId}:`, err);
+        }
+      })
+    );
+  }
+
+  for (let i = 0; i < toUpdateEvents.length; i += BATCH_SIZE) {
+    const batch = toUpdateEvents.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async ({ eventId, payload, name }) => {
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+          if (!res.ok) {
+            if (res.status === 404 || res.status === 410) {
+              const insertRes = await fetch(
+                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(payload),
+                }
+              );
+              if (!insertRes.ok) {
+                console.warn(`Failed to re-insert updated class event ${name}:`, await insertRes.text());
+              }
+            } else {
+              console.warn(`Failed to update class event ${name}:`, await res.text());
+            }
+          }
+        } catch (err) {
+          console.warn(`Error updating class event ${name}:`, err);
         }
       })
     );
