@@ -469,15 +469,29 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
 };
 
 const hasEventChanged = (existing: CalendarEventItem, payload: GoogleCalendarEventInput): boolean => {
-  if ((existing.summary || '') !== (payload.summary || '')) return true;
-  if ((existing.location || '') !== (payload.location || '')) return true;
-  if ((existing.description || '') !== (payload.description || '')) return true;
+  if ((existing.summary || '').trim() !== (payload.summary || '').trim()) return true;
+  if ((existing.location || '').trim() !== (payload.location || '').trim()) return true;
+  if ((existing.description || '').trim() !== (payload.description || '').trim()) return true;
   if ((existing.colorId || '') !== (payload.colorId || '')) return true;
-  if (existing.start?.dateTime !== payload.start.dateTime) return true;
-  if (existing.end?.dateTime !== payload.end.dateTime) return true;
-  const existingRec = (existing.recurrence || []).join(';');
-  const payloadRec = (payload.recurrence || []).join(';');
-  if (existingRec !== payloadRec) return true;
+
+  const existingStart = existing.start?.dateTime ? existing.start.dateTime.slice(0, 19) : '';
+  const payloadStart = payload.start.dateTime ? payload.start.dateTime.slice(0, 19) : '';
+  if (existingStart !== payloadStart) return true;
+
+  const existingEnd = existing.end?.dateTime ? existing.end.dateTime.slice(0, 19) : '';
+  const payloadEnd = payload.end.dateTime ? payload.end.dateTime.slice(0, 19) : '';
+  if (existingEnd !== payloadEnd) return true;
+
+  const normalizeRec = (rec: string[] = []) =>
+    rec
+      .join(';')
+      .replace(/;WKST=[A-Z]{2}/g, '')
+      .split(';')
+      .filter(Boolean)
+      .sort()
+      .join(';');
+
+  if (normalizeRec(existing.recurrence) !== normalizeRec(payload.recurrence)) return true;
   return false;
 };
 
@@ -622,10 +636,19 @@ export const diffSyncClassesToGoogleCalendar = async (
             }
           );
           if (!res.ok) {
+            if (res.status === 401) {
+              throw new Error('Google authorization token expired during sync.');
+            }
+            if (res.status === 403) {
+              throw new Error('Google Calendar access permission denied.');
+            }
             const errorText = await res.text();
             console.warn(`Failed to insert class event ${cls.name}:`, errorText);
           }
         } catch (err) {
+          if (err instanceof Error && (err.message.includes('expired') || err.message.includes('permission denied'))) {
+            throw err;
+          }
           console.warn(`Error inserting class event ${cls.name}:`, err);
         }
       })

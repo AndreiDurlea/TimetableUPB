@@ -10,7 +10,6 @@ import {
   getStoredSyncMetadata,
   saveSyncMetadata,
   getGoogleAccessToken,
-  extractAndStoreTokens,
   testGoogleCalendarAccess,
   initiateGoogleOAuth,
   findOrCreateCalendar,
@@ -43,8 +42,6 @@ export const useGoogleCalendarSync = () => {
 
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasJustRedirectedRef = useRef(false);
-  const pendingRedirectSyncRef = useRef(false);
-  const redirectForcedTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -78,11 +75,11 @@ export const useGoogleCalendarSync = () => {
     if (!user || (!targetSubgroupId && !isMockMode)) {
       setEnrolledClasses([]);
       setLoadingEnrollments(false);
-      return;
+      return [];
     }
 
     if (isMockMode && !targetSubgroupId) {
-      setEnrolledClasses([
+      const mockClasses = [
         {
           id: 'mock-class-1',
           name: 'Algoritmi Paraleli si Distribuiti',
@@ -122,9 +119,10 @@ export const useGoogleCalendarSync = () => {
           building_shorthand: 'EC',
           room_index: '105',
         },
-      ] as DetailedClass[]);
+      ] as DetailedClass[];
+      setEnrolledClasses(mockClasses);
       setLoadingEnrollments(false);
-      return;
+      return mockClasses;
     }
 
     setLoadingEnrollments(true);
@@ -211,7 +209,7 @@ export const useGoogleCalendarSync = () => {
 
       const isMock = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
       if (finalClasses.length === 0 && isMock) {
-        setEnrolledClasses([
+        const mockClasses = [
           {
             id: 'mock-class-1',
             name: 'Algoritmi Paraleli si Distribuiti',
@@ -251,15 +249,18 @@ export const useGoogleCalendarSync = () => {
             building_shorthand: 'EC',
             room_index: '105',
           },
-        ] as DetailedClass[]);
+        ] as DetailedClass[];
+        setEnrolledClasses(mockClasses);
+        return mockClasses;
       } else {
         setEnrolledClasses(finalClasses);
+        return finalClasses;
       }
     } catch (err) {
       console.error('Error fetching enrolled classes for calendar sync:', err);
       const isMock = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
       if (isMock) {
-        setEnrolledClasses([
+        const mockClasses = [
           {
             id: 'mock-class-1',
             name: 'Algoritmi Paraleli si Distribuiti',
@@ -299,8 +300,11 @@ export const useGoogleCalendarSync = () => {
             building_shorthand: 'EC',
             room_index: '105',
           },
-        ] as DetailedClass[]);
+        ] as DetailedClass[];
+        setEnrolledClasses(mockClasses);
+        return mockClasses;
       }
+      return [];
     } finally {
       setLoadingEnrollments(false);
     }
@@ -378,7 +382,7 @@ export const useGoogleCalendarSync = () => {
     if (!syncMetadata || !syncMetadata.syncedClassIds) return false;
     const syncedKey = [...syncMetadata.syncedClassIds].sort().join(',');
     if (syncedKey !== currentClassIdsKey) return true;
-    if (syncMetadata.syncedFingerprint && syncMetadata.syncedFingerprint !== currentClassFingerprint) {
+    if (!syncMetadata.syncedFingerprint || syncMetadata.syncedFingerprint !== currentClassFingerprint) {
       return true;
     }
     const currentSubgroup = profile?.subgroup_id || null;
@@ -391,12 +395,19 @@ export const useGoogleCalendarSync = () => {
   const syncStatus: SyncStatus = useMemo(() => {
     if (isSyncing) return 'syncing';
     if (!isLinked) return 'not_synced';
+    if (isOutOfSync) return 'out_of_sync';
     return 'in_sync';
-  }, [isSyncing, isLinked]);
+  }, [isSyncing, isLinked, isOutOfSync]);
 
   const executeSync = useCallback(async (forcedToken?: string, isUserInitiated = false) => {
     if (!user) return;
-    if (enrolledClasses.length === 0) {
+
+    let classesToSync = enrolledClasses;
+    if (classesToSync.length === 0) {
+      classesToSync = await fetchEnrolledClasses();
+    }
+
+    if (classesToSync.length === 0) {
       if (isUserInitiated) {
         setErrorMessage('Please select your group or enroll in classes before syncing.');
       }
@@ -463,16 +474,22 @@ export const useGoogleCalendarSync = () => {
       }
 
       setSyncProgressMessage('Syncing schedule...');
-      let createdCount = enrolledClasses.length;
+      let createdCount = classesToSync.length;
       if (!isMockMode) {
-        createdCount = await diffSyncClassesToGoogleCalendar(token, calendarId, enrolledClasses);
+        createdCount = await diffSyncClassesToGoogleCalendar(token, calendarId, classesToSync);
       }
+
+      const syncIds = classesToSync.map(c => c.id).filter((id): id is string => Boolean(id)).sort();
+      const syncFingerprint = classesToSync
+        .map(c => `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ''}:${c.building_shorthand || ''}`)
+        .sort()
+        .join('|');
 
       const newMetadata: SyncMetadata = {
         calendarId,
         calendarName: DEFAULT_CALENDAR_TITLE,
-        syncedClassIds: currentClassIds,
-        syncedFingerprint: currentClassFingerprint,
+        syncedClassIds: syncIds,
+        syncedFingerprint: syncFingerprint,
         syncedAt: Date.now(),
         syncedCount: createdCount,
         userSubgroupId: profile?.subgroup_id || null,
@@ -481,6 +498,7 @@ export const useGoogleCalendarSync = () => {
       await saveSyncMetadata(user.id, newMetadata);
       setSyncMetadata(newMetadata);
       setAutoSyncAuthFailed(false);
+      wasJustRedirectedRef.current = false;
       setSyncProgressMessage('');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown sync error occurred.';
@@ -492,7 +510,7 @@ export const useGoogleCalendarSync = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [user, profile?.subgroup_id, enrolledClasses, currentClassIds, currentClassFingerprint]);
+  }, [user, profile?.subgroup_id, enrolledClasses, fetchEnrolledClasses]);
 
   const syncNow = useCallback(async (forcedToken?: string, isUserInitiated = true) => {
     setAutoSyncAuthFailed(false);
@@ -539,35 +557,60 @@ export const useGoogleCalendarSync = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('sync_google') === '1') {
+    if (params.get('sync_google') !== '1') return;
+
+    let isCancelled = false;
+    let syncTriggered = false;
+
+    const cleanupUrl = () => {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('sync_google');
+        window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
+      } catch {}
+    };
+
+    const triggerSyncWithToken = async (token: string) => {
+      if (syncTriggered || isCancelled) return;
+      syncTriggered = true;
       wasJustRedirectedRef.current = true;
-      pendingRedirectSyncRef.current = true;
-
-      void (async () => {
-        const freshToken = await extractAndStoreTokens();
-        if (freshToken) {
-          redirectForcedTokenRef.current = freshToken;
-        }
-        try {
-          const url = new URL(window.location.href);
-          url.searchParams.delete('sync_google');
-          url.searchParams.delete('code');
-          window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''));
-        } catch {}
-      })();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (pendingRedirectSyncRef.current && user && !loadingEnrollments) {
-      if (enrolledClasses.length > 0) {
-        pendingRedirectSyncRef.current = false;
-        const token = redirectForcedTokenRef.current || undefined;
-        redirectForcedTokenRef.current = null;
-        void syncNow(token, true);
+      try {
+        await executeSync(token, true);
+      } finally {
+        cleanupUrl();
       }
-    }
-  }, [user, loadingEnrollments, enrolledClasses.length, syncNow]);
+    };
+
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.provider_token && !isCancelled) {
+        localStorage.setItem('google_provider_token', session.provider_token);
+        void triggerSyncWithToken(session.provider_token);
+        return;
+      }
+
+      const stored = localStorage.getItem('google_provider_token');
+      if (stored && !isCancelled) {
+        const access = await testGoogleCalendarAccess(stored);
+        if (access.ok && !isCancelled) {
+          void triggerSyncWithToken(stored);
+          return;
+        }
+      }
+    })();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.provider_token && !isCancelled) {
+        localStorage.setItem('google_provider_token', session.provider_token);
+        void triggerSyncWithToken(session.provider_token);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [executeSync]);
 
   return {
     syncStatus,

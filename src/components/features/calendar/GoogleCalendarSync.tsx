@@ -25,6 +25,7 @@ export const GoogleCalendarSync: React.FC = () => {
     syncStatus,
     syncNow,
     removeSync,
+    errorMessage,
   } = useGoogleCalendarSync();
 
   const isSynced = syncStatus === 'in_sync';
@@ -81,6 +82,11 @@ export const GoogleCalendarSync: React.FC = () => {
           )}
         </div>
       </div>
+      {errorMessage && (
+        <div style={{ color: '#ef4444', fontSize: '0.8em', textAlign: 'center', marginTop: '4px' }}>
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 };
