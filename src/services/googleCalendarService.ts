@@ -154,7 +154,7 @@ export const getGoogleAccessToken = async (): Promise<string | null> => {
 
 export const testGoogleCalendarAccess = async (token: string): Promise<CalendarAccessResult> => {
   try {
-    const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=1', {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer&maxResults=1', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -207,13 +207,14 @@ interface CalendarListResponse {
   items?: Array<{
     id: string;
     summary: string;
+    accessRole?: string;
+    deleted?: boolean;
   }>;
 }
 
-
 export const findExistingCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string | null> => {
   try {
-    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -223,7 +224,10 @@ export const findExistingCalendar = async (token: string, title = DEFAULT_CALEND
 
     const listData = (await listRes.json()) as CalendarListResponse;
     const existingCalendar = listData.items?.find(
-      cal => cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
+      cal =>
+        !cal.deleted &&
+        (cal.accessRole === 'owner' || cal.accessRole === 'writer') &&
+        cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
     );
 
     return existingCalendar?.id || null;
@@ -313,11 +317,11 @@ export const fetchCalendarEvents = async (
 };
 
 export const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
-  if (event.extendedProperties?.shared?.classId) {
-    return event.extendedProperties.shared.classId;
-  }
   if (event.extendedProperties?.private?.classId) {
     return event.extendedProperties.private.classId;
+  }
+  if (event.extendedProperties?.shared?.classId) {
+    return event.extendedProperties.shared.classId;
   }
   if (event.description) {
     const match = event.description.match(/\[class_id:([^\]]+)\]/);
@@ -461,9 +465,6 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
       private: {
         classId: cls.id,
       },
-      shared: {
-        classId: cls.id,
-      },
     },
   };
 };
@@ -548,6 +549,20 @@ export const diffSyncClassesToGoogleCalendar = async (
     }
   }
 
+  const extractGoogleErrorMessage = async (res: Response): Promise<string> => {
+    try {
+      const errorText = await res.text();
+      const parsed = JSON.parse(errorText);
+      if (parsed?.error?.message) {
+        return parsed.error.message;
+      }
+      return errorText || `Status ${res.status}`;
+    } catch {
+      return `Status ${res.status}`;
+    }
+  };
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const BATCH_SIZE = 4;
 
   for (let i = 0; i < toDeleteEventIds.length; i += BATCH_SIZE) {
@@ -565,13 +580,24 @@ export const diffSyncClassesToGoogleCalendar = async (
             }
           );
           if (!res.ok && res.status !== 404 && res.status !== 410) {
+            if (res.status === 401) {
+              throw new Error('Google authorization token expired during sync.');
+            }
+            if (res.status === 403) {
+              const msg = await extractGoogleErrorMessage(res);
+              throw new Error(`Google Calendar access permission denied: ${msg}`);
+            }
             console.warn(`Failed to delete event ${eventId}:`, res.status);
           }
         } catch (err) {
+          if (err instanceof Error && (err.message.includes('expired') || err.message.includes('permission denied'))) {
+            throw err;
+          }
           console.warn(`Error deleting event ${eventId}:`, err);
         }
       })
     );
+    await delay(50);
   }
 
   for (let i = 0; i < toUpdateEvents.length; i += BATCH_SIZE) {
@@ -607,14 +633,25 @@ export const diffSyncClassesToGoogleCalendar = async (
                 console.warn(`Failed to re-insert updated class event ${name}:`, await insertRes.text());
               }
             } else {
+              if (res.status === 401) {
+                throw new Error('Google authorization token expired during sync.');
+              }
+              if (res.status === 403) {
+                const msg = await extractGoogleErrorMessage(res);
+                throw new Error(`Google Calendar access permission denied: ${msg}`);
+              }
               console.warn(`Failed to update class event ${name}:`, await res.text());
             }
           }
         } catch (err) {
+          if (err instanceof Error && (err.message.includes('expired') || err.message.includes('permission denied'))) {
+            throw err;
+          }
           console.warn(`Error updating class event ${name}:`, err);
         }
       })
     );
+    await delay(50);
   }
 
   for (let i = 0; i < toAddClasses.length; i += BATCH_SIZE) {
@@ -640,7 +677,8 @@ export const diffSyncClassesToGoogleCalendar = async (
               throw new Error('Google authorization token expired during sync.');
             }
             if (res.status === 403) {
-              throw new Error('Google Calendar access permission denied.');
+              const msg = await extractGoogleErrorMessage(res);
+              throw new Error(`Google Calendar access permission denied: ${msg}`);
             }
             const errorText = await res.text();
             console.warn(`Failed to insert class event ${cls.name}:`, errorText);
@@ -653,6 +691,7 @@ export const diffSyncClassesToGoogleCalendar = async (
         }
       })
     );
+    await delay(50);
   }
 
   return classes.length;
