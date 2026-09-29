@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../auth/useAuth';
 import type { Database } from '../../../lib/database.types';
 import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
+import { getClassStudyYear } from '../../../utils/styleUtils';
 
 const TIMETABLE_CACHE_PREFIX = 'timetable_cache_';
 const LATEST_CACHE_KEY = 'timetable_cache_latest';
@@ -241,6 +242,22 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
                     if (classIds.length > 0) {
                         const { data: defaultData } = await supabase.from('detailed_classes').select('*').in('id', classIds);
                         if (defaultData) defaultClasses = defaultData as Class[];
+                    }
+
+                    const activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
+                    if (activeYear !== null) {
+                        const mismatchedManualIds: string[] = [];
+                        manualClasses = manualClasses.filter(c => {
+                            const cy = getClassStudyYear(c);
+                            if (cy !== null && cy !== activeYear) {
+                                if (c.id) mismatchedManualIds.push(c.id);
+                                return false;
+                            }
+                            return true;
+                        });
+                        if (mismatchedManualIds.length > 0 && user) {
+                            void supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
+                        }
                     }
 
                     const conflictingDefaultIds = new Set<string>();
