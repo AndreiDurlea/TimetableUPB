@@ -503,6 +503,16 @@ export const useGoogleCalendarSync = () => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown sync error occurred.';
       console.error('Google Calendar sync failed:', err);
+      const isAuthError =
+        message.toLowerCase().includes('permission') ||
+        message.toLowerCase().includes('denied') ||
+        message.toLowerCase().includes('expired') ||
+        message.toLowerCase().includes('401') ||
+        message.toLowerCase().includes('403');
+      if (isAuthError) {
+        localStorage.removeItem('google_provider_token');
+        localStorage.removeItem('google_provider_refresh_token');
+      }
       if (!isUserInitiated) {
         setAutoSyncAuthFailed(true);
       }
