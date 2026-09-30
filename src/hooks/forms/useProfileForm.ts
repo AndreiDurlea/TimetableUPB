@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabase.ts';
 import { useAuth } from '../auth/useAuth.ts';
 import type { Database } from '../../lib/database.types.ts';
+import { getClassStudyYear } from '../../utils/styleUtils.ts';
 
 type Class = Database['public']['Tables']['classes']['Row'];
 type Faculty = Database['public']['Tables']['faculties']['Row'];
@@ -40,7 +41,13 @@ interface HierarchyResponse {
   } | null;
 }
 
-import { getStoredSelectionRaw, saveStoredSelection, SELECTION_STORAGE_KEY } from '../../utils/selectionStorage.ts';
+import {
+  getStoredSelectionRaw,
+  getStoredSelection,
+  saveStoredSelection,
+  getScoutSelection,
+  saveScoutSelection,
+} from '../../utils/selectionStorage.ts';
 
 const DEFAULT_SELECTION: Selection = {
   facultyId: '',
@@ -69,22 +76,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
     if (isProfilePage) {
       return DEFAULT_SELECTION;
     }
-    try {
-      const saved = getStoredSelectionRaw();
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          facultyId: parsed.facultyId || '',
-          domainId: parsed.domainId || '',
-          year: parsed.year || '',
-          seriesId: parsed.seriesId || '',
-          groupId: parsed.groupId || '',
-          subgroupId: parsed.subgroupId || '',
-        };
-      }
-    } catch {
-      return DEFAULT_SELECTION;
-    }
+    const scout = user ? getScoutSelection() : getStoredSelection();
+    if (scout) return scout;
     return DEFAULT_SELECTION;
   });
 
@@ -303,6 +296,23 @@ export const useProfileForm = (isProfilePage: boolean) => {
       await supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', idsToDelete);
     }
 
+    if (manualClassIds.length > 0) {
+      const { data: manualDetailed } = await supabase.from('detailed_classes').select('*').in('id', manualClassIds);
+      if (manualDetailed) {
+        const targetYear = selection.year ? parseInt(selection.year, 10) : null;
+        const mismatchedManualIds: string[] = [];
+        for (const cls of manualDetailed) {
+          const cy = getClassStudyYear(cls);
+          if (targetYear !== null && cy !== null && cy !== targetYear) {
+            if (cls.id) mismatchedManualIds.push(cls.id);
+          }
+        }
+        if (mismatchedManualIds.length > 0) {
+          await supabase.from('user_classes').delete().eq('user_id', user.id).in('class_id', mismatchedManualIds);
+        }
+      }
+    }
+
     const { data: removedClasses } = await supabase.from('user_removed_classes').select('class_id').eq('user_id', user.id);
     const removedClassIds = (removedClasses || []).map(r => r.class_id);
     const irrelevantRemovedIds = removedClassIds.filter(id => !newDefaultClassIds.includes(id));
@@ -315,8 +325,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
     setOriginalSelection(selection);
     setIsDirty(false);
     setConflictingManualClasses([]);
-    triggerRefresh();
     await revalidateProfile();
+    triggerRefresh();
     setTimeout(() => setStatus(''), 2000);
   }, [user, selection, conflictingManualClasses, triggerRefresh, revalidateProfile]);
 
@@ -351,8 +361,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
         if (!user) {
           saveStoredSelection(newSelection);
         } else {
-          localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
-          window.dispatchEvent(new Event('profile_selection_changed'));
+          saveScoutSelection(newSelection);
         }
       }
       return newSelection;
@@ -454,8 +463,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
         if (!user) {
           saveStoredSelection(newSelection);
         } else {
-          localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
-          window.dispatchEvent(new Event('profile_selection_changed'));
+          saveScoutSelection(newSelection);
         }
       }
       return changed ? newSelection : currentSelection;

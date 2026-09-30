@@ -176,14 +176,22 @@ export const useClassSearch = () => {
 
         try {
             if (action === 'add') {
-                const { error } = await supabase.from('user_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                const { error } = await supabase.from('user_classes').upsert(
+                    [{ user_id: user.id, class_id: cls.id }],
+                    { onConflict: 'user_id,class_id' }
+                );
                 if (error) throw error;
+                await supabase.from('user_removed_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
             } else if (action === 'remove_manual') {
                 const { error } = await supabase.from('user_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
                 if (error) throw error;
             } else if (action === 'remove_default') {
-                const { error } = await supabase.from('user_removed_classes').insert([{ user_id: user.id, class_id: cls.id }]);
+                const { error } = await supabase.from('user_removed_classes').upsert(
+                    [{ user_id: user.id, class_id: cls.id }],
+                    { onConflict: 'user_id,class_id' }
+                );
                 if (error) throw error;
+                await supabase.from('user_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
             } else if (action === 're_add_default') {
                 const { error } = await supabase.from('user_removed_classes').delete().eq('user_id', user.id).eq('class_id', cls.id);
                 if (error) throw error;

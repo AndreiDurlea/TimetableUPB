@@ -20,6 +20,7 @@ export interface SyncMetadata {
   calendarId: string;
   calendarName: string;
   syncedClassIds: string[];
+  syncedFingerprint?: string;
   syncedAt: number;
   syncedCount: number;
   userSubgroupId: string | null;
@@ -41,6 +42,7 @@ export interface GoogleCalendarEventInput {
   recurrence?: string[];
   extendedProperties?: {
     private?: Record<string, string>;
+    shared?: Record<string, string>;
   };
 }
 
@@ -63,11 +65,18 @@ export const getStoredSyncMetadata = (userId: string, userMetadata?: Record<stri
 
   try {
     const raw = localStorage.getItem(getSyncStorageKey(userId));
-    if (!raw) return null;
-    return JSON.parse(raw) as SyncMetadata;
-  } catch {
-    return null;
-  }
+    if (raw) return JSON.parse(raw) as SyncMetadata;
+  } catch {}
+
+  try {
+    const fallbackRaw = localStorage.getItem('google_calendar_sync');
+    if (fallbackRaw) {
+      const parsed = JSON.parse(fallbackRaw) as SyncMetadata;
+      if (parsed && parsed.calendarId) return parsed;
+    }
+  } catch {}
+
+  return null;
 };
 
 export const saveSyncMetadata = async (userId: string, data: SyncMetadata): Promise<void> => {
@@ -122,24 +131,6 @@ export const extractAndStoreTokens = async (): Promise<string | null> => {
     }
   }
 
-  if (typeof window !== 'undefined' && window.location.search) {
-    const searchParams = new URLSearchParams(window.location.search);
-    const code = searchParams.get('code');
-    if (code) {
-      try {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error && data?.session?.provider_token) {
-          localStorage.setItem(TOKEN_KEY, data.session.provider_token);
-          if (data.session.provider_refresh_token) {
-            localStorage.setItem('google_provider_refresh_token', data.session.provider_refresh_token);
-          }
-          return data.session.provider_token;
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -163,7 +154,7 @@ export const getGoogleAccessToken = async (): Promise<string | null> => {
 
 export const testGoogleCalendarAccess = async (token: string): Promise<CalendarAccessResult> => {
   try {
-    const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=1', {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer&maxResults=1', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -207,7 +198,6 @@ export const initiateGoogleOAuth = async (returnQueryParam = 'sync_google=1'): P
       redirectTo: redirectUrl.toString(),
       queryParams: {
         access_type: 'offline',
-        prompt: 'consent',
       },
     },
   });
@@ -217,30 +207,71 @@ interface CalendarListResponse {
   items?: Array<{
     id: string;
     summary: string;
+    accessRole?: string;
+    deleted?: boolean;
   }>;
 }
 
+export const findExistingCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string | null> => {
+  try {
+    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!listRes.ok) return null;
+
+    const listData = (await listRes.json()) as CalendarListResponse;
+    const existingCalendar = listData.items?.find(
+      cal =>
+        !cal.deleted &&
+        (cal.accessRole === 'owner' || cal.accessRole === 'writer') &&
+        cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
+    );
+
+    return existingCalendar?.id || null;
+  } catch {
+    return null;
+  }
+};
 
 export const findOrCreateCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string> => {
-  const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  try {
+    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  if (!listRes.ok) {
-    const errorText = await listRes.text();
-    throw new Error(`Failed to list Google Calendars: ${listRes.status} ${errorText}`);
-  }
+    if (listRes.ok) {
+      const listData = (await listRes.json()) as CalendarListResponse;
+      const matchingCalendars = (listData.items || []).filter(
+        cal =>
+          !cal.deleted &&
+          (cal.accessRole === 'owner' || cal.accessRole === 'writer') &&
+          cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
+      );
 
-  const listData = (await listRes.json()) as CalendarListResponse;
-  const existingCalendar = listData.items?.find(
-    cal => cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
-  );
-
-  if (existingCalendar?.id) {
-    return existingCalendar.id;
-  }
+      if (matchingCalendars.length > 0) {
+        const primaryCalendarId = matchingCalendars[0].id;
+        if (matchingCalendars.length > 1) {
+          for (let i = 1; i < matchingCalendars.length; i++) {
+            const extraCalId = matchingCalendars[i].id;
+            try {
+              await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(extraCalId)}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+            } catch (e) {
+              console.warn(`Failed to delete duplicate calendar ${extraCalId}:`, e);
+            }
+          }
+        }
+        return primaryCalendarId;
+      }
+    }
+  } catch {}
 
   const createRes = await fetch('https://www.googleapis.com/calendar/v3/calendars', {
     method: 'POST',
@@ -264,12 +295,18 @@ export const findOrCreateCalendar = async (token: string, title = DEFAULT_CALEND
   return createdData.id;
 };
 
-interface CalendarEventItem {
+export interface CalendarEventItem {
   id: string;
   summary?: string;
   description?: string;
+  location?: string;
+  start?: { dateTime?: string; timeZone?: string };
+  end?: { dateTime?: string; timeZone?: string };
+  recurrence?: string[];
+  colorId?: string;
   extendedProperties?: {
     private?: Record<string, string>;
+    shared?: Record<string, string>;
   };
 }
 
@@ -283,6 +320,11 @@ export const fetchCalendarEvents = async (
   do {
     const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     url.searchParams.set('maxResults', '250');
+    url.searchParams.set('showDeleted', 'false');
+    url.searchParams.set(
+      'fields',
+      'items(id,summary,description,location,colorId,start,end,recurrence,extendedProperties),nextPageToken'
+    );
     if (pageToken) {
       url.searchParams.set('pageToken', pageToken);
     }
@@ -309,9 +351,12 @@ export const fetchCalendarEvents = async (
   return events;
 };
 
-const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
+export const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
   if (event.extendedProperties?.private?.classId) {
     return event.extendedProperties.private.classId;
+  }
+  if (event.extendedProperties?.shared?.classId) {
+    return event.extendedProperties.shared.classId;
   }
   if (event.description) {
     const match = event.description.match(/\[class_id:([^\]]+)\]/);
@@ -322,19 +367,27 @@ const getClassIdFromEvent = (event: CalendarEventItem): string | null => {
 
 export const clearCalendarEvents = async (token: string, calendarId: string): Promise<void> => {
   const items = await fetchCalendarEvents(token, calendarId);
-  await Promise.all(
-    items.map(event =>
-      fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(event.id)}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+  const BATCH_SIZE = 4;
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (event) => {
+        try {
+          await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(event.id)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+        } catch (err) {
+          console.warn(`Failed to clear event ${event.id}:`, err);
         }
-      )
-    )
-  );
+      })
+    );
+  }
 };
 
 const getClassColorId = (classType: string | null | undefined): string => {
@@ -346,14 +399,24 @@ const getClassColorId = (classType: string | null | undefined): string => {
   return '9';
 };
 
+const formatExDate = (d: Date, timeStr: string): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const cleanTime = timeStr.slice(0, 5).replace(':', '');
+  return `${y}${m}${day}T${cleanTime}00`;
+};
+
 const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null => {
   if (!cls.id || !cls.day_of_week || !cls.start_time || !cls.end_time) {
     return null;
   }
 
   const dayOfWeek = cls.day_of_week;
-  const isEvenFrequency = cls.frequency?.toLowerCase() === 'even';
-  const isOddFrequency = cls.frequency?.toLowerCase() === 'odd';
+  const freq = (cls.frequency || '').toLowerCase();
+  const isEvenFrequency = freq === 'even';
+  const isOddFrequency = freq === 'odd';
   const isBiweekly = isEvenFrequency || isOddFrequency;
 
   const baseDay = isEvenFrequency ? 28 + 7 : 28;
@@ -384,13 +447,44 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
     cls.frequency ? `Frecvență: ${cls.frequency}` : null,
   ].filter(Boolean);
 
-  const recurrenceRule = isBiweekly
-    ? 'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20270123T000000Z'
-    : 'RRULE:FREQ=WEEKLY;UNTIL=20270123T000000Z';
+  let recurrence: string[];
+
+  if (!isBiweekly) {
+    const breakW1 = new Date(2026, 11, 21 + (dayOfWeek - 1));
+    const breakW2 = new Date(2026, 11, 28 + (dayOfWeek - 1));
+    const breakW3 = new Date(2027, 0, 4 + (dayOfWeek - 1));
+
+    const exDateStr = [
+      formatExDate(breakW1, startTimeClean),
+      formatExDate(breakW2, startTimeClean),
+      formatExDate(breakW3, startTimeClean),
+    ].join(',');
+
+    recurrence = [
+      'RRULE:FREQ=WEEKLY;UNTIL=20270123T000000Z',
+      `EXDATE;TZID=Europe/Bucharest:${exDateStr}`,
+    ];
+  } else if (isOddFrequency) {
+    const week13Date = new Date(2027, 0, 11 + (dayOfWeek - 1));
+    const rDateStr = formatExDate(week13Date, startTimeClean);
+
+    recurrence = [
+      'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20261219T000000Z',
+      `RDATE;TZID=Europe/Bucharest:${rDateStr}`,
+    ];
+  } else {
+    const week14Date = new Date(2027, 0, 18 + (dayOfWeek - 1));
+    const rDateStr = formatExDate(week14Date, startTimeClean);
+
+    recurrence = [
+      'RRULE:FREQ=WEEKLY;INTERVAL=2;UNTIL=20261219T000000Z',
+      `RDATE;TZID=Europe/Bucharest:${rDateStr}`,
+    ];
+  }
 
   return {
     summary,
-    description: `${descLines.join('\n')}\n[class_id:${cls.id}]`,
+    description: descLines.join('\n'),
     location,
     colorId: getClassColorId(cls.class_type),
     start: {
@@ -401,13 +495,40 @@ const buildEventPayload = (cls: DetailedClass): GoogleCalendarEventInput | null 
       dateTime: endDateTime,
       timeZone: 'Europe/Bucharest',
     },
-    recurrence: [recurrenceRule],
+    recurrence,
     extendedProperties: {
       private: {
         classId: cls.id,
       },
     },
   };
+};
+
+const hasEventChanged = (existing: CalendarEventItem, payload: GoogleCalendarEventInput): boolean => {
+  if ((existing.summary || '').trim() !== (payload.summary || '').trim()) return true;
+  if ((existing.location || '').trim() !== (payload.location || '').trim()) return true;
+  if ((existing.description || '').trim() !== (payload.description || '').trim()) return true;
+  if ((existing.colorId || '') !== (payload.colorId || '')) return true;
+
+  const existingStart = existing.start?.dateTime ? existing.start.dateTime.slice(0, 19) : '';
+  const payloadStart = payload.start.dateTime ? payload.start.dateTime.slice(0, 19) : '';
+  if (existingStart !== payloadStart) return true;
+
+  const existingEnd = existing.end?.dateTime ? existing.end.dateTime.slice(0, 19) : '';
+  const payloadEnd = payload.end.dateTime ? payload.end.dateTime.slice(0, 19) : '';
+  if (existingEnd !== payloadEnd) return true;
+
+  const normalizeRec = (rec: string[] = []) =>
+    rec
+      .join(';')
+      .replace(/;WKST=[A-Z]{2}/g, '')
+      .split(';')
+      .filter(Boolean)
+      .sort()
+      .join(';');
+
+  if (normalizeRec(existing.recurrence) !== normalizeRec(payload.recurrence)) return true;
+  return false;
 };
 
 export const diffSyncClassesToGoogleCalendar = async (
@@ -418,65 +539,196 @@ export const diffSyncClassesToGoogleCalendar = async (
   const existingEvents = await fetchCalendarEvents(token, calendarId);
 
   const existingMap = new Map<string, string>();
+  const existingEventMap = new Map<string, CalendarEventItem>();
   const toDeleteEventIds: string[] = [];
 
   for (const event of existingEvents) {
     const classId = getClassIdFromEvent(event);
-    if (!classId) {
+    const hasLegacyDesc = Boolean(event.description && event.description.includes('[class_id:'));
+    if (!classId || hasLegacyDesc) {
       toDeleteEventIds.push(event.id);
     } else if (existingMap.has(classId)) {
       toDeleteEventIds.push(event.id);
     } else {
       existingMap.set(classId, event.id);
+      existingEventMap.set(classId, event);
     }
   }
 
-  const desiredClassIds = new Set(classes.map(c => c.id));
+  const desiredClassIds = new Set(classes.map(c => c.id).filter(Boolean));
 
   for (const [classId, eventId] of existingMap.entries()) {
     if (!desiredClassIds.has(classId)) {
       toDeleteEventIds.push(eventId);
       existingMap.delete(classId);
+      existingEventMap.delete(classId);
     }
   }
 
-  const toAddClasses = classes.filter(
-    (cls): cls is DetailedClass & { id: string } => Boolean(cls.id && !existingMap.has(cls.id))
-  );
+  const toAddClasses: DetailedClass[] = [];
+  const toUpdateEvents: Array<{ eventId: string; payload: GoogleCalendarEventInput; name: string }> = [];
 
-  const deletePromises = toDeleteEventIds.map(eventId =>
-    fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
-  );
-
-  const addPromises = toAddClasses.map(async (cls) => {
+  for (const cls of classes) {
+    if (!cls.id) continue;
     const payload = buildEventPayload(cls);
-    if (!payload) return;
-    const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.warn(`Failed to insert class event ${cls.name}:`, errorText);
-    }
-  });
+    if (!payload) continue;
 
-  await Promise.all([...deletePromises, ...addPromises]);
+    const eventId = existingMap.get(cls.id);
+    if (!eventId) {
+      toAddClasses.push(cls);
+    } else {
+      const existingEvent = existingEventMap.get(cls.id);
+      if (existingEvent && hasEventChanged(existingEvent, payload)) {
+        toUpdateEvents.push({ eventId, payload, name: cls.name || cls.shorthand || 'Class' });
+      }
+    }
+  }
+
+  const extractGoogleErrorMessage = async (res: Response): Promise<string> => {
+    try {
+      const errorText = await res.text();
+      const parsed = JSON.parse(errorText);
+      if (parsed?.error?.message) {
+        return parsed.error.message;
+      }
+      return errorText || `Status ${res.status}`;
+    } catch {
+      return `Status ${res.status}`;
+    }
+  };
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const BATCH_SIZE = 4;
+
+  for (let i = 0; i < toDeleteEventIds.length; i += BATCH_SIZE) {
+    const batch = toDeleteEventIds.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (eventId) => {
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          if (!res.ok && res.status !== 404 && res.status !== 410) {
+            if (res.status === 401) {
+              throw new Error('Google authorization token expired during sync.');
+            }
+            if (res.status === 403) {
+              const msg = await extractGoogleErrorMessage(res);
+              throw new Error(`Google Calendar access permission denied: ${msg}`);
+            }
+            console.warn(`Failed to delete event ${eventId}:`, res.status);
+          }
+        } catch (err) {
+          if (err instanceof Error && (err.message.includes('expired') || err.message.includes('permission denied'))) {
+            throw err;
+          }
+          console.warn(`Error deleting event ${eventId}:`, err);
+        }
+      })
+    );
+    await delay(50);
+  }
+
+  for (let i = 0; i < toUpdateEvents.length; i += BATCH_SIZE) {
+    const batch = toUpdateEvents.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async ({ eventId, payload, name }) => {
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+          if (!res.ok) {
+            if (res.status === 404 || res.status === 410) {
+              const insertRes = await fetch(
+                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(payload),
+                }
+              );
+              if (!insertRes.ok) {
+                console.warn(`Failed to re-insert updated class event ${name}:`, await insertRes.text());
+              }
+            } else {
+              if (res.status === 401) {
+                throw new Error('Google authorization token expired during sync.');
+              }
+              if (res.status === 403) {
+                const msg = await extractGoogleErrorMessage(res);
+                throw new Error(`Google Calendar access permission denied: ${msg}`);
+              }
+              console.warn(`Failed to update class event ${name}:`, await res.text());
+            }
+          }
+        } catch (err) {
+          if (err instanceof Error && (err.message.includes('expired') || err.message.includes('permission denied'))) {
+            throw err;
+          }
+          console.warn(`Error updating class event ${name}:`, err);
+        }
+      })
+    );
+    await delay(50);
+  }
+
+  for (let i = 0; i < toAddClasses.length; i += BATCH_SIZE) {
+    const batch = toAddClasses.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (cls) => {
+        const payload = buildEventPayload(cls);
+        if (!payload) return;
+        try {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+          if (!res.ok) {
+            if (res.status === 401) {
+              throw new Error('Google authorization token expired during sync.');
+            }
+            if (res.status === 403) {
+              const msg = await extractGoogleErrorMessage(res);
+              throw new Error(`Google Calendar access permission denied: ${msg}`);
+            }
+            const errorText = await res.text();
+            console.warn(`Failed to insert class event ${cls.name}:`, errorText);
+          }
+        } catch (err) {
+          if (err instanceof Error && (err.message.includes('expired') || err.message.includes('permission denied'))) {
+            throw err;
+          }
+          console.warn(`Error inserting class event ${cls.name}:`, err);
+        }
+      })
+    );
+    await delay(50);
+  }
+
   return classes.length;
 };
 

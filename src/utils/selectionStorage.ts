@@ -97,6 +97,49 @@ export const removeStoredSelection = (): void => {
   window.dispatchEvent(new Event('profile_selection_changed'));
 };
 
+export const SCOUT_STORAGE_KEY = 'scout_selection';
+
+export const getScoutSelectionRaw = (): string | null => {
+  try {
+    return localStorage.getItem(SCOUT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const getScoutSelection = (): StoredSelection | null => {
+  const raw = getScoutSelectionRaw();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.subgroupId) {
+      return {
+        facultyId: parsed.facultyId || '',
+        domainId: parsed.domainId || '',
+        year: parsed.year || '',
+        seriesId: parsed.seriesId || '',
+        groupId: parsed.groupId || '',
+        subgroupId: parsed.subgroupId || '',
+      };
+    }
+  } catch {}
+  return null;
+};
+
+export const saveScoutSelection = (selection: StoredSelection): void => {
+  try {
+    localStorage.setItem(SCOUT_STORAGE_KEY, JSON.stringify(selection));
+  } catch {}
+  window.dispatchEvent(new Event('scout_selection_changed'));
+};
+
+export const removeScoutSelection = (): void => {
+  try {
+    localStorage.removeItem(SCOUT_STORAGE_KEY);
+  } catch {}
+  window.dispatchEvent(new Event('scout_selection_changed'));
+};
+
 export const fetchSubgroupHierarchy = async (subgroupId: string): Promise<StoredSelection | null> => {
   try {
     const { data, error } = await supabase

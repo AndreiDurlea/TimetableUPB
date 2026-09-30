@@ -42,43 +42,40 @@
   font-size: 0.85em;
   cursor: pointer;
   user-select: none;
-  border: 1px solid transparent;
   min-width: 96px;
-}
-
-.syncButtonNormal {
   background-color: #ffffff;
   color: #000000;
-  border-color: #ffffff;
+  border: 1px solid #ffffff;
+  transition: all 0.2s ease;
 }
 
-.syncButtonNormal:hover:not(:disabled) {
+.syncButton:hover {
   background-color: #f5f5f5;
 }
 
-:global([data-theme="light"]) .syncButtonNormal {
+:global([data-theme="light"]) .syncButton {
   background-color: #ffffff;
   color: #111827;
   border-color: #d1d5db;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-:global([data-theme="light"]) .syncButtonNormal:hover:not(:disabled) {
+:global([data-theme="light"]) .syncButton:hover {
   background-color: #f9fafb;
   border-color: #9ca3af;
 }
 
-.syncButtonDisabled {
-  background-color: #27272a;
-  color: #71717a;
-  border-color: #3f3f46;
+.syncButtonSyncing {
   cursor: default;
 }
 
-:global([data-theme="light"]) .syncButtonDisabled {
-  background-color: #f3f4f6;
-  color: #9ca3af;
-  border-color: #e5e7eb;
+.syncButtonSyncing:hover {
+  background-color: #ffffff;
+}
+
+:global([data-theme="light"]) .syncButtonSyncing:hover {
+  background-color: #ffffff;
+  border-color: #d1d5db;
 }
 
 .smallBubbles {
