@@ -52,22 +52,20 @@ export const useGoogleCalendarSync = () => {
   }, [user]);
 
   const fetchEnrolledClasses = useCallback(async () => {
-    let targetSubgroupId: string | null = null;
+    let targetSubgroupId = profile?.subgroup_id || null;
 
-    try {
-      const saved = getStoredSelectionRaw();
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object' && parsed.subgroupId) {
-          targetSubgroupId = parsed.subgroupId;
+    if (!targetSubgroupId && !user) {
+      try {
+        const saved = getStoredSelectionRaw();
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object' && parsed.subgroupId) {
+            targetSubgroupId = parsed.subgroupId;
+          }
         }
+      } catch {
+        targetSubgroupId = null;
       }
-    } catch {
-      targetSubgroupId = null;
-    }
-
-    if (!targetSubgroupId) {
-      targetSubgroupId = profile?.subgroup_id || null;
     }
 
     const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
