@@ -237,10 +237,41 @@ export const findExistingCalendar = async (token: string, title = DEFAULT_CALEND
 };
 
 export const findOrCreateCalendar = async (token: string, title = DEFAULT_CALENDAR_TITLE): Promise<string> => {
-  const existingId = await findExistingCalendar(token, title);
-  if (existingId) {
-    return existingId;
-  }
+  try {
+    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=writer', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (listRes.ok) {
+      const listData = (await listRes.json()) as CalendarListResponse;
+      const matchingCalendars = (listData.items || []).filter(
+        cal =>
+          !cal.deleted &&
+          (cal.accessRole === 'owner' || cal.accessRole === 'writer') &&
+          cal.summary?.trim().toLowerCase() === title.trim().toLowerCase()
+      );
+
+      if (matchingCalendars.length > 0) {
+        const primaryCalendarId = matchingCalendars[0].id;
+        if (matchingCalendars.length > 1) {
+          for (let i = 1; i < matchingCalendars.length; i++) {
+            const extraCalId = matchingCalendars[i].id;
+            try {
+              await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(extraCalId)}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+            } catch (e) {
+              console.warn(`Failed to delete duplicate calendar ${extraCalId}:`, e);
+            }
+          }
+        }
+        return primaryCalendarId;
+      }
+    }
+  } catch {}
 
   const createRes = await fetch('https://www.googleapis.com/calendar/v3/calendars', {
     method: 'POST',
@@ -290,6 +321,10 @@ export const fetchCalendarEvents = async (
     const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     url.searchParams.set('maxResults', '250');
     url.searchParams.set('showDeleted', 'false');
+    url.searchParams.set(
+      'fields',
+      'items(id,summary,description,location,colorId,start,end,recurrence,extendedProperties),nextPageToken'
+    );
     if (pageToken) {
       url.searchParams.set('pageToken', pageToken);
     }

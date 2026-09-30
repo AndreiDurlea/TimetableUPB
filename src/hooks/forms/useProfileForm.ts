@@ -41,7 +41,13 @@ interface HierarchyResponse {
   } | null;
 }
 
-import { getStoredSelectionRaw, saveStoredSelection, SELECTION_STORAGE_KEY } from '../../utils/selectionStorage.ts';
+import {
+  getStoredSelectionRaw,
+  getStoredSelection,
+  saveStoredSelection,
+  getScoutSelection,
+  saveScoutSelection,
+} from '../../utils/selectionStorage.ts';
 
 const DEFAULT_SELECTION: Selection = {
   facultyId: '',
@@ -70,22 +76,8 @@ export const useProfileForm = (isProfilePage: boolean) => {
     if (isProfilePage) {
       return DEFAULT_SELECTION;
     }
-    try {
-      const saved = getStoredSelectionRaw();
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          facultyId: parsed.facultyId || '',
-          domainId: parsed.domainId || '',
-          year: parsed.year || '',
-          seriesId: parsed.seriesId || '',
-          groupId: parsed.groupId || '',
-          subgroupId: parsed.subgroupId || '',
-        };
-      }
-    } catch {
-      return DEFAULT_SELECTION;
-    }
+    const scout = user ? getScoutSelection() : getStoredSelection();
+    if (scout) return scout;
     return DEFAULT_SELECTION;
   });
 
@@ -369,8 +361,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
         if (!user) {
           saveStoredSelection(newSelection);
         } else {
-          localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
-          window.dispatchEvent(new Event('profile_selection_changed'));
+          saveScoutSelection(newSelection);
         }
       }
       return newSelection;
@@ -472,8 +463,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
         if (!user) {
           saveStoredSelection(newSelection);
         } else {
-          localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(newSelection));
-          window.dispatchEvent(new Event('profile_selection_changed'));
+          saveScoutSelection(newSelection);
         }
       }
       return changed ? newSelection : currentSelection;

@@ -8,7 +8,7 @@ import { useWeekLabels } from '../../../hooks/features/timetable/useWeekLabels';
 import { getSemesterWeek, isEvenWeek, getWeekLabel, SEMESTER_START } from '../../../utils/semesterUtils';
 import TimetableSelectionModal from './TimetableSelectionModal';
 import TimetableHeader from './TimetableHeader';
-import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
+import { getStoredSelectionRaw, getScoutSelectionRaw } from '../../../utils/selectionStorage';
 
 const DayCardGrid: React.FC = () => {
     const { user, loading } = useAuth();
@@ -281,7 +281,7 @@ const DayCardGrid: React.FC = () => {
     const handleModalSubmit = (selectedSubgroupId?: string) => {
         let subgroupId = selectedSubgroupId;
         if (!subgroupId) {
-            const savedSelectionRaw = getStoredSelectionRaw();
+            const savedSelectionRaw = user ? getScoutSelectionRaw() : getStoredSelectionRaw();
             if (savedSelectionRaw) {
                 try {
                     const parsed = JSON.parse(savedSelectionRaw);
