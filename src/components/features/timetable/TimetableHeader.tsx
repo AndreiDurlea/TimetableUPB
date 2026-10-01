@@ -7,6 +7,7 @@ interface TimetableHeaderProps {
   hierarchyString: string;
   onSwitchToUserTimetable: () => void;
   onShowTimetableSwitcher: () => void;
+  loading?: boolean;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -15,9 +16,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   hierarchyString,
   onSwitchToUserTimetable,
   onShowTimetableSwitcher,
+  loading = false,
 }) => {
   return (
-    <div className={styles.headerText}>
+    <div className={styles.headerText} style={loading ? { visibility: 'hidden' } : undefined}>
       {user ? (
         tempSubgroupId ? (
           <>

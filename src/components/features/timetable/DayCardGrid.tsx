@@ -366,6 +366,7 @@ const DayCardGrid: React.FC = () => {
                 hierarchyString={hierarchyString}
                 onSwitchToUserTimetable={() => setTempSubgroupId(null)}
                 onShowTimetableSwitcher={() => setShowModal(true)}
+                loading={loading || (Boolean(tempSubgroupId) && !hierarchyString)}
             />
 
             <TimetableSelectionModal

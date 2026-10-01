@@ -2,7 +2,6 @@ import React from 'react';
 import styles from './DayCard.module.css';
 import type { Database } from '../../../lib/database.types';
 import ClassRectangle from './ClassRectangle';
-import LoadingIndicator from '../../ui/LoadingIndicator';
 
 type DetailedClass = Database['public']['Views']['detailed_classes']['Row'] & {
   shorthand: string | null;
@@ -57,9 +56,7 @@ const DayCard: React.FC<DayCardProps> = ({ date, isActive, classes, isLoading })
             ))}
             <div className={styles.classContainer}>
               {isLoading ? (
-                <div className={styles.noCoursesMessage}>
-                  <LoadingIndicator />
-                </div>
+                <div className={styles.noCoursesMessage} style={{ visibility: 'hidden' }} />
               ) : classes.length === 0 ? (
                 <div className={styles.noCoursesMessage}>
                   No courses on {fullDayName}

@@ -46,6 +46,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
     conflictingManualClasses,
     persistedManualCount,
     persistedRemovedCount,
+    loadingCounts,
     getFieldStatus
   } = useProfileForm(isProfilePage);
   
@@ -176,7 +177,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ isProfilePage = false, childr
           {typeof children === 'function' ? children({ selection, isFormComplete }) : children}
         </FormContainer>
         
-        <div className={styles.status}>
+        <div className={styles.status} style={loadingCounts ? { visibility: 'hidden' } : undefined}>
             {status ? (
                 <span>{status}</span>
             ) : (

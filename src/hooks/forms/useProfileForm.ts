@@ -68,6 +68,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
   const [removedClassCount, setRemovedClassCount] = useState<number>(0);
   const [enrolledClassCount, setEnrolledClassCount] = useState<number>(0);
   const [dirtyEnrolledCount, setDirtyEnrolledCount] = useState<number>(0);
+  const [accurateCountsSubgroupId, setAccurateCountsSubgroupId] = useState<string | null>(null);
   const [conflictingManualClasses, setConflictingManualClasses] = useState<Class[]>([]);
   const [persistedManualCount, setPersistedManualCount] = useState<number>(0);
   const [persistedRemovedCount, setPersistedRemovedCount] = useState<number>(0);
@@ -173,6 +174,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
         setAddedClassCount(0);
         setRemovedClassCount(0);
         setEnrolledClassCount(defaultList.length);
+        setAccurateCountsSubgroupId(originalSelection.subgroupId);
         return;
       }
 
@@ -189,6 +191,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
       setRemovedClassCount(actualRemoved.length);
       setAddedClassCount(actualAdded.length);
       setEnrolledClassCount(total);
+      setAccurateCountsSubgroupId(originalSelection.subgroupId);
     };
 
     void fetchAccurateCounts();
@@ -498,6 +501,10 @@ export const useProfileForm = (isProfilePage: boolean) => {
     return { isChanged, isPending };
   };
 
+  const loadingCounts = isProfilePage
+    ? (Boolean(profile?.subgroup_id) && accurateCountsSubgroupId !== profile?.subgroup_id)
+    : false;
+
   return { 
     selection, 
     originalSelection, 
@@ -517,6 +524,7 @@ export const useProfileForm = (isProfilePage: boolean) => {
     conflictingManualClasses,
     persistedManualCount,
     persistedRemovedCount,
+    loadingCounts,
     getFieldStatus
   };
 };
