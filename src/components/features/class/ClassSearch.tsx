@@ -211,7 +211,7 @@ const ClassSearch: React.FC = () => {
                         onSelectSuggestion={(item) => setSearchTerm(item.name)}
                         onClear={() => setSearchTerm('')}
                     />
-                    <SearchBadge disabled={!isProfileComplete}>
+                    <SearchBadge disabled={!isProfileComplete} style={loading ? { visibility: 'hidden' } : undefined}>
                         {isProfileComplete ? filteredClasses.length : 0}
                     </SearchBadge>
                 </div>
@@ -227,8 +227,8 @@ const ClassSearch: React.FC = () => {
             </div>
 
             {isProfileComplete && filteredClasses.length === 0 ? (
-                <div className={styles.noClasses}>
-                    No classes found
+                <div className={styles.noClasses} style={loading ? { visibility: 'hidden' } : undefined}>
+                    {!loading && 'No classes found'}
                 </div>
             ) : (
                 <div
