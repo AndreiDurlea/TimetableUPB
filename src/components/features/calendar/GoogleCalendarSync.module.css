@@ -78,6 +78,30 @@
   border-color: #d1d5db;
 }
 
+.syncButtonError {
+  background-color: #d32f2f;
+  color: #ffffff;
+  border: none;
+}
+
+.syncButtonError:hover {
+  background-color: #b71c1c;
+  color: #ffffff;
+  border: none;
+}
+
+:global([data-theme="light"]) .syncButtonError {
+  background-color: #d32f2f;
+  color: #ffffff;
+  border: none;
+}
+
+:global([data-theme="light"]) .syncButtonError:hover {
+  background-color: #b71c1c;
+  color: #ffffff;
+  border: none;
+}
+
 .smallBubbles {
   display: inline-flex;
   align-items: center;

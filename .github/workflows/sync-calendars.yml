@@ -1,0 +1,50 @@
+name: Sync Google Calendars
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Re-sync all users even if schedule fingerprint matches'
+        required: false
+        type: boolean
+        default: false
+      subgroup_id:
+        description: 'Optional subgroup ID filter'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run calendar sync script
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.force_all }}" = "true" ]; then
+            ARGS="$ARGS --force-all"
+          fi
+          if [ -n "${{ github.event.inputs.subgroup_id }}" ]; then
+            ARGS="$ARGS --subgroup-id ${{ github.event.inputs.subgroup_id }}"
+          fi
+          node scripts/sync_calendars.mjs $ARGS
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
