@@ -15,7 +15,7 @@ const ExternalArrowIcon = () => (
 );
 
 const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="13" height="13" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="13" height="13" aria-hidden="true" style={{ pointerEvents: 'none' }}>
     <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clipRule="evenodd" />
   </svg>
 );
@@ -23,13 +23,17 @@ const CloseIcon = () => (
 export const GoogleCalendarSync: React.FC = () => {
   const {
     syncStatus,
+    syncMetadata,
     syncNow,
     removeSync,
     errorMessage,
+    hasTokenInDb,
   } = useGoogleCalendarSync();
 
-  const isSynced = syncStatus === 'in_sync';
   const isSyncing = syncStatus === 'syncing';
+  const isFailed = Boolean(errorMessage);
+  const isLinked = hasTokenInDb || Boolean(syncMetadata?.calendarId);
+  const isSynced = isLinked && !isFailed && (syncStatus === 'in_sync' || syncStatus === 'out_of_sync');
 
   const handleSyncClick = () => {
     if (isSyncing) return;
@@ -38,8 +42,15 @@ export const GoogleCalendarSync: React.FC = () => {
 
   const getButtonText = () => {
     if (isSyncing) return 'Syncing';
-    if (isSynced) return 'Synced';
-    return 'Sync now';
+    if (isFailed) return 'Sync failed. Retry';
+    if (!isLinked) return 'Sync now';
+    return 'Synced';
+  };
+
+  const getButtonClass = () => {
+    if (isSyncing) return styles.syncButtonSyncing;
+    if (isFailed) return styles.syncButtonError;
+    return '';
   };
 
   return (
@@ -49,9 +60,10 @@ export const GoogleCalendarSync: React.FC = () => {
         <div className={styles.buttonWrapper}>
           <button
             type="button"
-            className={`${styles.syncButton} ${isSyncing ? styles.syncButtonSyncing : ''}`}
+            className={`${styles.syncButton} ${getButtonClass()}`}
             onClick={handleSyncClick}
             data-testid="sync-google-calendar-button"
+            title={isFailed && errorMessage ? errorMessage : undefined}
           >
             {isSyncing && <span className={styles.spinner} />}
             {isSynced && !isSyncing && <CheckIcon />}
@@ -71,7 +83,10 @@ export const GoogleCalendarSync: React.FC = () => {
               </a>
               <button
                 type="button"
-                onClick={() => void removeSync()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeSync();
+                }}
                 className={styles.smallBubble}
                 title="Remove syncing"
                 aria-label="Remove syncing"
@@ -82,11 +97,6 @@ export const GoogleCalendarSync: React.FC = () => {
           )}
         </div>
       </div>
-      {errorMessage && (
-        <div style={{ color: '#ef4444', fontSize: '0.8em', textAlign: 'center', marginTop: '4px' }}>
-          {errorMessage}
-        </div>
-      )}
     </div>
   );
 };

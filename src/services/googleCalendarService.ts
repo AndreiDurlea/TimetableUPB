@@ -91,12 +91,40 @@ export const saveSyncMetadata = async (userId: string, data: SyncMetadata): Prom
   } catch (err) {
     console.error('Failed to persist sync metadata to user account:', err);
   }
+
+  try {
+    const refreshToken = typeof localStorage !== 'undefined'
+      ? localStorage.getItem('google_provider_refresh_token')
+      : null;
+    await supabase.from('user_calendar_sync').upsert({
+      user_id: userId,
+      calendar_id: data.calendarId,
+      calendar_name: data.calendarName,
+      subgroup_id: data.userSubgroupId,
+      synced_fingerprint: data.syncedFingerprint,
+      synced_class_ids: data.syncedClassIds,
+      synced_at: new Date(data.syncedAt).toISOString(),
+      ...(refreshToken ? { refresh_token: refreshToken } : {}),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch (err) {
+    console.error('Failed to persist sync record to user_calendar_sync:', err);
+  }
 };
 
 export const clearStoredSyncMetadata = async (userId: string): Promise<void> => {
   try {
     localStorage.removeItem(getSyncStorageKey(userId));
+    localStorage.removeItem('google_calendar_sync');
+    localStorage.removeItem('google_provider_refresh_token');
+    localStorage.removeItem('google_provider_token');
   } catch {}
+
+  try {
+    await supabase.from('user_calendar_sync').delete().eq('user_id', userId);
+  } catch (err) {
+    console.error('Failed to delete sync record from user_calendar_sync:', err);
+  }
 
   try {
     await supabase.auth.updateUser({
@@ -745,7 +773,7 @@ export const unlinkGoogleCalendar = async (
   token: string | null,
   calendarId: string | null
 ): Promise<void> => {
-  clearStoredSyncMetadata(userId);
+  await clearStoredSyncMetadata(userId);
   if (token && calendarId) {
     try {
       await fetch(
