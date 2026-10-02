@@ -28,6 +28,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (session?.provider_refresh_token) {
         localStorage.setItem('google_provider_refresh_token', session.provider_refresh_token);
+        if (session.user) {
+          void supabase
+            .from('user_calendar_sync')
+            .update({ refresh_token: session.provider_refresh_token, updated_at: new Date().toISOString() })
+            .eq('user_id', session.user.id);
+        }
       }
       setLoading(false); 
     });
@@ -45,6 +51,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (session?.provider_refresh_token) {
         localStorage.setItem('google_provider_refresh_token', session.provider_refresh_token);
+        if (session.user) {
+          void supabase
+            .from('user_calendar_sync')
+            .update({ refresh_token: session.provider_refresh_token, updated_at: new Date().toISOString() })
+            .eq('user_id', session.user.id);
+        }
       }
       setLoading(false);
     });

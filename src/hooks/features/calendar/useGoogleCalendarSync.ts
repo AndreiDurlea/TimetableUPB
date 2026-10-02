@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { supabase } from '../../../lib/supabase';
-import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
+import { getStoredSelection, getScoutSelection } from '../../../utils/selectionStorage';
 import { getClassStudyYear } from '../../../utils/styleUtils';
 import {
   type DetailedClass,
@@ -33,6 +33,17 @@ export const useGoogleCalendarSync = () => {
   const [enrolledClasses, setEnrolledClasses] = useState<DetailedClass[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [hasTokenInDb, setHasTokenInDb] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
+    if (isMockMode) return true;
+    if (localStorage.getItem('google_provider_refresh_token')) return true;
+    if (user) {
+      const meta = getStoredSyncMetadata(user.id, user.user_metadata);
+      if (meta?.calendarId) return true;
+    }
+    return false;
+  });
   const [syncProgressMessage, setSyncProgressMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoSyncAuthFailed, setAutoSyncAuthFailed] = useState(false);
@@ -42,35 +53,96 @@ export const useGoogleCalendarSync = () => {
 
   const autoSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasJustRedirectedRef = useRef(false);
+  const isUnlinkingRef = useRef(false);
 
   useEffect(() => {
+    if (isUnlinkingRef.current) return;
     if (user) {
       setSyncMetadata(getStoredSyncMetadata(user.id, user.user_metadata));
+      void (async () => {
+        try {
+          if (isUnlinkingRef.current) return;
+          const { data } = await supabase
+            .from('user_calendar_sync')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (isUnlinkingRef.current) return;
+          if (data && data.calendar_id) {
+            const rowMeta: SyncMetadata = {
+              calendarId: data.calendar_id,
+              calendarName: data.calendar_name || DEFAULT_CALENDAR_TITLE,
+              syncedClassIds: data.synced_class_ids || [],
+              syncedFingerprint: data.synced_fingerprint || '',
+              syncedAt: data.synced_at ? new Date(data.synced_at).getTime() : Date.now(),
+              syncedCount: (data.synced_class_ids || []).length,
+              userSubgroupId: data.subgroup_id || null,
+            };
+            setSyncMetadata(prev => prev?.calendarId ? prev : rowMeta);
+          }
+          if (data && data.refresh_token) {
+            setHasTokenInDb(true);
+            if (!localStorage.getItem('google_provider_refresh_token')) {
+              localStorage.setItem('google_provider_refresh_token', data.refresh_token);
+            }
+          } else if (!data) {
+            setHasTokenInDb(false);
+          } else {
+            const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
+            setHasTokenInDb(isMockMode);
+          }
+        } catch {
+          const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
+          setHasTokenInDb(isMockMode);
+        }
+      })();
     } else {
       setSyncMetadata(null);
+      setHasTokenInDb(false);
     }
   }, [user]);
 
   const fetchEnrolledClasses = useCallback(async () => {
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        currentUser = session?.user || null;
+      } catch {}
+    }
+
     let targetSubgroupId = profile?.subgroup_id || null;
 
-    if (!targetSubgroupId && !user) {
+    if (!targetSubgroupId && currentUser) {
       try {
-        const saved = getStoredSelectionRaw();
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object' && parsed.subgroupId) {
-            targetSubgroupId = parsed.subgroupId;
-          }
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('subgroup_id')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+        if (userProfile?.subgroup_id) {
+          targetSubgroupId = userProfile.subgroup_id;
         }
-      } catch {
-        targetSubgroupId = null;
+      } catch {}
+    }
+
+    if (!targetSubgroupId) {
+      const stored = getStoredSelection();
+      if (stored?.subgroupId) {
+        targetSubgroupId = stored.subgroupId;
+      }
+    }
+
+    if (!targetSubgroupId) {
+      const scout = getScoutSelection();
+      if (scout?.subgroupId) {
+        targetSubgroupId = scout.subgroupId;
       }
     }
 
     const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
 
-    if (!user || (!targetSubgroupId && !isMockMode)) {
+    if (!currentUser || (!targetSubgroupId && !isMockMode)) {
       setEnrolledClasses([]);
       setLoadingEnrollments(false);
       return [];
@@ -133,8 +205,8 @@ export const useGoogleCalendarSync = () => {
       const defaultIds = (relevantClasses || []).map((c: RelevantClass) => c.id).filter(Boolean);
 
       const [manualRes, removedRes] = await Promise.all([
-        supabase.from('user_classes').select('class_id').eq('user_id', user.id),
-        supabase.from('user_removed_classes').select('class_id').eq('user_id', user.id),
+        supabase.from('user_classes').select('class_id').eq('user_id', currentUser.id),
+        supabase.from('user_removed_classes').select('class_id').eq('user_id', currentUser.id),
       ]);
 
       const manualIds = manualRes.data?.map(r => r.class_id).filter((id): id is string => Boolean(id)) || [];
@@ -398,22 +470,40 @@ export const useGoogleCalendarSync = () => {
   }, [isSyncing, isLinked, isOutOfSync]);
 
   const executeSync = useCallback(async (forcedToken?: string, isUserInitiated = false) => {
-    if (!user) return;
+    setIsSyncing(true);
+    setErrorMessage(null);
+    setSyncProgressMessage('Syncing...');
+
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        currentUser = session?.user || null;
+      } catch {}
+    }
+
+    if (!currentUser) {
+      if (isUserInitiated) {
+        await initiateGoogleOAuth('sync_google=1');
+      } else {
+        setIsSyncing(false);
+      }
+      return;
+    }
 
     let classesToSync = enrolledClasses;
-    if (classesToSync.length === 0) {
+    if (classesToSync.length === 0 || loadingEnrollments) {
       classesToSync = await fetchEnrolledClasses();
     }
 
     if (classesToSync.length === 0) {
+      setIsSyncing(false);
       if (isUserInitiated) {
         setErrorMessage('Please select your group or enroll in classes before syncing.');
       }
       return;
     }
 
-    setIsSyncing(true);
-    setErrorMessage(null);
     setSyncProgressMessage('Checking Google permissions...');
 
     try {
@@ -457,7 +547,6 @@ export const useGoogleCalendarSync = () => {
           await initiateGoogleOAuth('sync_google=1');
         } else {
           setAutoSyncAuthFailed(true);
-          setErrorMessage('Google Calendar authorization required to auto-sync.');
         }
         return;
       }
@@ -493,8 +582,9 @@ export const useGoogleCalendarSync = () => {
         userSubgroupId: profile?.subgroup_id || null,
       };
 
-      await saveSyncMetadata(user.id, newMetadata);
+      await saveSyncMetadata(currentUser.id, newMetadata);
       setSyncMetadata(newMetadata);
+      setHasTokenInDb(true);
       setAutoSyncAuthFailed(false);
       wasJustRedirectedRef.current = false;
       setSyncProgressMessage('');
@@ -509,16 +599,16 @@ export const useGoogleCalendarSync = () => {
         message.toLowerCase().includes('403');
       if (isAuthError) {
         localStorage.removeItem('google_provider_token');
-        localStorage.removeItem('google_provider_refresh_token');
       }
       if (!isUserInitiated) {
         setAutoSyncAuthFailed(true);
+      } else {
+        setErrorMessage(message);
       }
-      setErrorMessage(message);
     } finally {
       setIsSyncing(false);
     }
-  }, [user, profile?.subgroup_id, enrolledClasses, fetchEnrolledClasses]);
+  }, [user, profile?.subgroup_id, enrolledClasses, fetchEnrolledClasses, loadingEnrollments]);
 
   const syncNow = useCallback(async (forcedToken?: string, isUserInitiated = true) => {
     setAutoSyncAuthFailed(false);
@@ -527,19 +617,22 @@ export const useGoogleCalendarSync = () => {
 
   const removeSync = useCallback(async () => {
     if (!user) return;
+    isUnlinkingRef.current = true;
     setIsSyncing(true);
     setSyncProgressMessage('Disconnecting...');
     try {
+      setSyncMetadata(null);
+      setHasTokenInDb(false);
+      setAutoSyncAuthFailed(false);
       const token = await getGoogleAccessToken();
       const calendarId = syncMetadata?.calendarId || null;
       await unlinkGoogleCalendar(user.id, token, calendarId);
-      setSyncMetadata(null);
-      setAutoSyncAuthFailed(false);
     } catch (err) {
       console.error('Failed to unlink Google Calendar:', err);
     } finally {
       setIsSyncing(false);
       setSyncProgressMessage('');
+      isUnlinkingRef.current = false;
     }
   }, [user, syncMetadata]);
 
@@ -631,5 +724,6 @@ export const useGoogleCalendarSync = () => {
     errorMessage,
     syncNow,
     removeSync,
+    hasTokenInDb,
   };
 };
