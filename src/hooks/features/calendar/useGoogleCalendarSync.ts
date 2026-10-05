@@ -504,13 +504,51 @@ export const useGoogleCalendarSync = () => {
       return;
     }
 
-    setSyncProgressMessage('Checking Google permissions...');
+    setSyncProgressMessage('Syncing schedule...');
 
     try {
+      const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
+      if (!isMockMode && !forcedToken) {
+        try {
+          const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('sync-calendar', {
+            body: { force: isUserInitiated }
+          });
+
+          if (!edgeErr && edgeData?.in_sync) {
+            const syncIds = classesToSync.map(c => c.id).filter((id): id is string => Boolean(id)).sort();
+            const syncFingerprint = edgeData.synced_fingerprint || classesToSync
+              .map(c => `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ''}:${c.building_shorthand || ''}`)
+              .sort()
+              .join('|');
+
+            const newMetadata: SyncMetadata = {
+              calendarId: edgeData.calendar_id || syncMetadata?.calendarId || DEFAULT_CALENDAR_TITLE,
+              calendarName: DEFAULT_CALENDAR_TITLE,
+              syncedClassIds: syncIds,
+              syncedFingerprint: syncFingerprint,
+              syncedAt: Date.now(),
+              syncedCount: edgeData.count || classesToSync.length,
+              userSubgroupId: profile?.subgroup_id || null,
+            };
+
+            await saveSyncMetadata(currentUser.id, newMetadata);
+            setSyncMetadata(newMetadata);
+            setHasTokenInDb(true);
+            setAutoSyncAuthFailed(false);
+            wasJustRedirectedRef.current = false;
+            setSyncProgressMessage('');
+            setIsSyncing(false);
+            return;
+          }
+        } catch (edgeCallErr) {
+          console.warn('Edge function sync invocation error:', edgeCallErr);
+        }
+      }
+
+      setSyncProgressMessage('Checking Google permissions...');
       let token = forcedToken || (await getGoogleAccessToken());
       let accessResult = token ? await testGoogleCalendarAccess(token) : { ok: false, error: 'No token found' };
 
-      const isMockMode = Boolean((window as unknown as { __MOCK_GOOGLE_CALENDAR__?: boolean }).__MOCK_GOOGLE_CALENDAR__);
       if (!accessResult.ok && isMockMode) {
         token = 'mock_valid_google_token';
         accessResult = { ok: true };

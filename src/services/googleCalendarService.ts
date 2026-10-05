@@ -177,7 +177,25 @@ export const extractAndStoreTokens = async (): Promise<string | null> => {
 };
 
 export const getGoogleAccessToken = async (): Promise<string | null> => {
-  return extractAndStoreTokens();
+  const localToken = await extractAndStoreTokens();
+  if (localToken) {
+    const testResult = await testGoogleCalendarAccess(localToken);
+    if (testResult.ok) {
+      return localToken;
+    }
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('sync-calendar', {
+      body: { action: 'get_token' }
+    });
+    if (!error && data?.access_token) {
+      localStorage.setItem(TOKEN_KEY, data.access_token);
+      return data.access_token;
+    }
+  } catch {}
+
+  return localToken;
 };
 
 export const testGoogleCalendarAccess = async (token: string): Promise<CalendarAccessResult> => {

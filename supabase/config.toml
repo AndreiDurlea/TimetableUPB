@@ -1,0 +1,5 @@
+[functions.sync-calendar]
+enabled = true
+verify_jwt = true
+import_map = "./functions/sync-calendar/deno.json"
+entrypoint = "./functions/sync-calendar/index.ts"
