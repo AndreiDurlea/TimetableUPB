@@ -345,75 +345,14 @@ const diffSyncCalendar = async (token: string, calendarId: string, classes: any[
   return classes.length;
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
-  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
-
-  if (!supabaseUrl || !supabaseServiceKey || !clientId || !clientSecret) {
-    return new Response(
-      JSON.stringify({ error: "Missing required backend configuration" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false },
-  });
-
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized: Missing authorization header" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  let callerUser: any = null;
-
-  if (token !== supabaseServiceKey) {
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData?.user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Invalid auth token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    callerUser = userData.user;
-  }
-
-  let body: any = {};
-  try {
-    body = await req.json();
-  } catch {}
-
-  const targetUserId = callerUser ? callerUser.id : body?.user_id;
-  if (!targetUserId) {
-    return new Response(
-      JSON.stringify({ error: "Missing user_id parameter" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const { data: syncRow, error: syncRowErr } = await supabase
-    .from("user_calendar_sync")
-    .select("*")
-    .eq("user_id", targetUserId)
-    .maybeSingle();
-
-  if (syncRowErr || !syncRow || !syncRow.calendar_id || !syncRow.refresh_token) {
-    return new Response(
-      JSON.stringify({ error: "No active Google Calendar sync configuration found for this user" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
+const syncSingleUser = async (
+  supabase: any,
+  clientId: string,
+  clientSecret: string,
+  targetUserId: string,
+  syncRow: any,
+  force = false
+) => {
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -427,21 +366,11 @@ Deno.serve(async (req) => {
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
-    return new Response(
-      JSON.stringify({ error: `Google token refresh failed: ${errText}` }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return { success: false, error: `Google token refresh failed: ${errText}` };
   }
 
   const tokenJson = await tokenRes.json();
   const googleAccessToken = tokenJson.access_token;
-
-  if (body?.action === "get_token") {
-    return new Response(
-      JSON.stringify({ access_token: googleAccessToken, expires_in: tokenJson.expires_in }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
 
   let targetSubgroupId = syncRow.subgroup_id;
   if (!targetSubgroupId) {
@@ -454,10 +383,7 @@ Deno.serve(async (req) => {
   }
 
   if (!targetSubgroupId) {
-    return new Response(
-      JSON.stringify({ error: "User has no subgroup selected" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return { success: false, error: "User has no subgroup selected" };
   }
 
   const { data: relevantClasses, error: rpcErr } = await supabase.rpc(
@@ -466,10 +392,7 @@ Deno.serve(async (req) => {
   );
 
   if (rpcErr) {
-    return new Response(
-      JSON.stringify({ error: `Failed to fetch relevant classes: ${rpcErr.message}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return { success: false, error: `Failed to fetch relevant classes: ${rpcErr.message}` };
   }
 
   const defaultIds = (relevantClasses || []).map((c: any) => c.id).filter(Boolean);
@@ -559,18 +482,16 @@ Deno.serve(async (req) => {
 
   const syncClassIds = finalClasses.map((c) => c.id).filter(Boolean).sort();
 
-  if (!body?.force && syncRow.synced_fingerprint === syncFingerprint) {
-    return new Response(
-      JSON.stringify({
-        synced: false,
-        in_sync: true,
-        count: finalClasses.length,
-        synced_at: syncRow.synced_at,
-        calendar_id: syncRow.calendar_id,
-        synced_fingerprint: syncRow.synced_fingerprint,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  if (!force && syncRow.synced_fingerprint === syncFingerprint) {
+    return {
+      success: true,
+      synced: false,
+      in_sync: true,
+      count: finalClasses.length,
+      synced_at: syncRow.synced_at,
+      calendar_id: syncRow.calendar_id,
+      synced_fingerprint: syncRow.synced_fingerprint,
+    };
   }
 
   const syncedCount = await diffSyncCalendar(googleAccessToken, syncRow.calendar_id, finalClasses);
@@ -586,15 +507,155 @@ Deno.serve(async (req) => {
     })
     .eq("user_id", targetUserId);
 
+  return {
+    success: true,
+    synced: true,
+    in_sync: true,
+    count: syncedCount,
+    synced_at: nowIso,
+    calendar_id: syncRow.calendar_id,
+    synced_fingerprint: syncFingerprint,
+  };
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+
+  if (!supabaseUrl || !supabaseServiceKey || !clientId || !clientSecret) {
+    return new Response(
+      JSON.stringify({ error: "Missing required backend configuration" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false },
+  });
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized: Missing authorization header" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  let callerUser: any = null;
+
+  if (token !== supabaseServiceKey) {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid auth token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    callerUser = userData.user;
+  }
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {}
+
+  if (body?.all_users === true) {
+    if (token !== supabaseServiceKey) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: only service role can sync all users" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: allUsers, error: listErr } = await supabase
+      .from("user_calendar_sync")
+      .select("*")
+      .not("refresh_token", "is", null);
+
+    if (listErr) {
+      return new Response(
+        JSON.stringify({ error: listErr.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const results = [];
+    for (const u of allUsers || []) {
+      const res = await syncSingleUser(supabase, clientId, clientSecret, u.user_id, u, Boolean(body?.force));
+      results.push({ user_id: u.user_id, ...res });
+    }
+
+    return new Response(
+      JSON.stringify({ total: (allUsers || []).length, results }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const targetUserId = callerUser ? callerUser.id : body?.user_id;
+  if (!targetUserId) {
+    return new Response(
+      JSON.stringify({ error: "Missing user_id parameter" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const { data: syncRow, error: syncRowErr } = await supabase
+    .from("user_calendar_sync")
+    .select("*")
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  if (syncRowErr || !syncRow || !syncRow.calendar_id || !syncRow.refresh_token) {
+    return new Response(
+      JSON.stringify({ error: "No active Google Calendar sync configuration found for this user" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (body?.action === "get_token") {
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: syncRow.refresh_token,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      return new Response(
+        JSON.stringify({ error: `Google token refresh failed: ${errText}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const tokenJson = await tokenRes.json();
+    return new Response(
+      JSON.stringify({ access_token: tokenJson.access_token, expires_in: tokenJson.expires_in }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const result = await syncSingleUser(supabase, clientId, clientSecret, targetUserId, syncRow, Boolean(body?.force));
+  if (!result.success) {
+    return new Response(
+      JSON.stringify({ error: result.error }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   return new Response(
-    JSON.stringify({
-      synced: true,
-      in_sync: true,
-      count: syncedCount,
-      synced_at: nowIso,
-      calendar_id: syncRow.calendar_id,
-      synced_fingerprint: syncFingerprint,
-    }),
+    JSON.stringify(result),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });
