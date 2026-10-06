@@ -42,12 +42,6 @@ const refreshGoogleAccessToken = async (refreshToken) => {
   return data.access_token;
 };
 
-const getClassStudyYear = (cls) => {
-  if (cls.series_name && /^[1-9]/.test(cls.series_name)) {
-    return parseInt(cls.series_name.charAt(0), 10);
-  }
-  return null;
-};
 
 const fetchCalendarEvents = async (token, calendarId) => {
   const events = [];
@@ -365,33 +359,6 @@ const resolveUserClasses = async (userId, subgroupId) => {
     if (defaultData) defaultClasses = defaultData;
   }
 
-  const yearCounts = {};
-  for (const c of defaultClasses) {
-    if (c.series_name && /^[1-9]/.test(c.series_name)) {
-      const y = parseInt(c.series_name.charAt(0), 10);
-      yearCounts[y] = (yearCounts[y] || 0) + 1;
-    }
-  }
-
-  let activeYear = null;
-  let maxCount = 0;
-  for (const [yStr, count] of Object.entries(yearCounts)) {
-    if (count > maxCount) {
-      maxCount = count;
-      activeYear = parseInt(yStr, 10);
-    }
-  }
-
-  if (activeYear === null) {
-    activeYear = defaultClasses.map(c => getClassStudyYear(c)).find(y => y !== null) || null;
-  }
-
-  if (activeYear !== null) {
-    manualClasses = manualClasses.filter(c => {
-      const cy = getClassStudyYear(c);
-      return cy === null || cy === activeYear;
-    });
-  }
 
   const conflictingDefaultIds = new Set();
   for (const manual of manualClasses) {
