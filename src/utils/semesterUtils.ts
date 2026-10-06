@@ -1,9 +1,25 @@
-export const SEMESTER_START = new Date(2026, 8, 28);
-export const WINTER_BREAK_START = new Date(2026, 11, 21);
-export const SEMESTER_PART2_START = new Date(2027, 0, 11);
-export const EXAM_SESSION_START = new Date(2027, 0, 25);
-export const INTER_SEMESTER_BREAK_START = new Date(2027, 1, 15);
-export const SEMESTER_2_START = new Date(2027, 2, 1);
+import { DEFAULT_SEMESTER_CONFIG, type SemesterConfig } from '../services/academicCalendarService';
+
+let currentConfig: SemesterConfig = { ...DEFAULT_SEMESTER_CONFIG };
+
+export let SEMESTER_START = currentConfig.semesterStart;
+export let WINTER_BREAK_START = currentConfig.winterBreakStart;
+export let SEMESTER_PART2_START = currentConfig.semesterPart2Start;
+export let EXAM_SESSION_START = currentConfig.examSessionStart;
+export let INTER_SEMESTER_BREAK_START = currentConfig.interSemesterBreakStart;
+export let SEMESTER_2_START = currentConfig.semester2Start;
+
+export const updateSemesterConfig = (cfg: SemesterConfig) => {
+    currentConfig = { ...cfg };
+    SEMESTER_START = currentConfig.semesterStart;
+    WINTER_BREAK_START = currentConfig.winterBreakStart;
+    SEMESTER_PART2_START = currentConfig.semesterPart2Start;
+    EXAM_SESSION_START = currentConfig.examSessionStart;
+    INTER_SEMESTER_BREAK_START = currentConfig.interSemesterBreakStart;
+    SEMESTER_2_START = currentConfig.semester2Start;
+};
+
+export const getSemesterConfig = (): SemesterConfig => currentConfig;
 
 export const TOTAL_SEMESTER_WEEKS = 14;
 
@@ -18,76 +34,88 @@ const getMondayOfWeek = (d: Date): Date => {
 export const getSemesterWeek = (d: Date): number => {
     const monday = getMondayOfWeek(d);
     const mTime = monday.getTime();
+    const semStart = currentConfig.semesterStart.getTime();
+    const winterBreak = currentConfig.winterBreakStart.getTime();
+    const semPart2 = currentConfig.semesterPart2Start.getTime();
+    const examSession = currentConfig.examSessionStart.getTime();
+    const interBreak = currentConfig.interSemesterBreakStart.getTime();
+    const sem2 = currentConfig.semester2Start.getTime();
 
-    if (mTime < SEMESTER_START.getTime()) {
-        const diffWeeks = Math.floor((mTime - SEMESTER_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < semStart) {
+        const diffWeeks = Math.floor((mTime - semStart) / (7 * 24 * 3600 * 1000));
         return diffWeeks;
     }
 
-    if (mTime < WINTER_BREAK_START.getTime()) {
-        const diffWeeks = Math.round((mTime - SEMESTER_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < winterBreak) {
+        const diffWeeks = Math.round((mTime - semStart) / (7 * 24 * 3600 * 1000));
         return diffWeeks + 1;
     }
 
-    if (mTime < SEMESTER_PART2_START.getTime()) {
-        const diffWeeks = Math.round((mTime - WINTER_BREAK_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < semPart2) {
+        const diffWeeks = Math.round((mTime - winterBreak) / (7 * 24 * 3600 * 1000));
         return -100 - diffWeeks;
     }
 
-    if (mTime < EXAM_SESSION_START.getTime()) {
-        const diffWeeks = Math.round((mTime - SEMESTER_PART2_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < examSession) {
+        const diffWeeks = Math.round((mTime - semPart2) / (7 * 24 * 3600 * 1000));
         return 13 + diffWeeks;
     }
 
-    if (mTime < INTER_SEMESTER_BREAK_START.getTime()) {
-        const diffWeeks = Math.round((mTime - EXAM_SESSION_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < interBreak) {
+        const diffWeeks = Math.round((mTime - examSession) / (7 * 24 * 3600 * 1000));
         return 15 + diffWeeks;
     }
 
-    if (mTime < SEMESTER_2_START.getTime()) {
-        const diffWeeks = Math.round((mTime - INTER_SEMESTER_BREAK_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < sem2) {
+        const diffWeeks = Math.round((mTime - interBreak) / (7 * 24 * 3600 * 1000));
         return 18 + diffWeeks;
     }
 
-    const diffWeeks = Math.round((mTime - SEMESTER_2_START.getTime()) / (7 * 24 * 3600 * 1000));
+    const diffWeeks = Math.round((mTime - sem2) / (7 * 24 * 3600 * 1000));
     return diffWeeks + 1;
 };
 
 export const isEvenWeek = (date: Date): boolean => {
     const monday = getMondayOfWeek(date);
     const mTime = monday.getTime();
+    const semStart = currentConfig.semesterStart.getTime();
+    const winterBreak = currentConfig.winterBreakStart.getTime();
+    const semPart2 = currentConfig.semesterPart2Start.getTime();
+    const examSession = currentConfig.examSessionStart.getTime();
+    const interBreak = currentConfig.interSemesterBreakStart.getTime();
+    const sem2 = currentConfig.semester2Start.getTime();
 
-    if (mTime < SEMESTER_START.getTime()) {
-        const diffWeeks = Math.floor((mTime - SEMESTER_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < semStart) {
+        const diffWeeks = Math.floor((mTime - semStart) / (7 * 24 * 3600 * 1000));
         return Math.abs(diffWeeks) % 2 === 1;
     }
 
-    if (mTime < WINTER_BREAK_START.getTime()) {
-        const diffWeeks = Math.round((mTime - SEMESTER_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < winterBreak) {
+        const diffWeeks = Math.round((mTime - semStart) / (7 * 24 * 3600 * 1000));
         return (diffWeeks + 1) % 2 === 0;
     }
 
-    if (mTime < SEMESTER_PART2_START.getTime()) {
-        const diffWeeks = Math.round((mTime - WINTER_BREAK_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < semPart2) {
+        const diffWeeks = Math.round((mTime - winterBreak) / (7 * 24 * 3600 * 1000));
         return diffWeeks % 2 === 1;
     }
 
-    if (mTime < EXAM_SESSION_START.getTime()) {
-        const diffWeeks = Math.round((mTime - SEMESTER_PART2_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < examSession) {
+        const diffWeeks = Math.round((mTime - semPart2) / (7 * 24 * 3600 * 1000));
         return (13 + diffWeeks) % 2 === 0;
     }
 
-    if (mTime < INTER_SEMESTER_BREAK_START.getTime()) {
-        const diffWeeks = Math.round((mTime - EXAM_SESSION_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < interBreak) {
+        const diffWeeks = Math.round((mTime - examSession) / (7 * 24 * 3600 * 1000));
         return diffWeeks % 2 === 1;
     }
 
-    if (mTime < SEMESTER_2_START.getTime()) {
-        const diffWeeks = Math.round((mTime - INTER_SEMESTER_BREAK_START.getTime()) / (7 * 24 * 3600 * 1000));
+    if (mTime < sem2) {
+        const diffWeeks = Math.round((mTime - interBreak) / (7 * 24 * 3600 * 1000));
         return diffWeeks % 2 === 0;
     }
 
-    const diffWeeks = Math.round((mTime - SEMESTER_2_START.getTime()) / (7 * 24 * 3600 * 1000));
+    const diffWeeks = Math.round((mTime - sem2) / (7 * 24 * 3600 * 1000));
     return (diffWeeks + 1) % 2 === 0;
 };
 
