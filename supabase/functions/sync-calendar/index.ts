@@ -470,13 +470,22 @@ const syncSingleUser = async (
 
   const finalClasses = [...finalDefaults, ...manualClasses];
 
-  const syncFingerprint = finalClasses
+  const holidays = (holidaysRes?.data || []) as any[];
+
+  const classFingerprint = finalClasses
     .map(
       (c) =>
         `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ""}:${c.building_shorthand || ""}`
     )
     .sort()
     .join("|");
+
+  const holidaysFingerprint = holidays
+    .map((h) => `${h.id}:${h.start_date}:${h.end_date}`)
+    .sort()
+    .join(";");
+
+  const syncFingerprint = `${classFingerprint}#${holidaysFingerprint}`;
 
   const syncClassIds = finalClasses.map((c) => c.id).filter(Boolean).sort();
 

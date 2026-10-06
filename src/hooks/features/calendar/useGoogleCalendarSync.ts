@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../../auth/useAuth';
+import { useAcademicCalendar } from '../timetable/useAcademicCalendar';
 import { supabase } from '../../../lib/supabase';
 import { getStoredSelection, getScoutSelection } from '../../../utils/selectionStorage';
 import {
@@ -29,6 +30,7 @@ const DEBOUNCE_AUTO_SYNC_MS = 1500;
 
 export const useGoogleCalendarSync = () => {
   const { user, profile, refreshTrigger } = useAuth();
+  const { holidays } = useAcademicCalendar();
   const [enrolledClasses, setEnrolledClasses] = useState<DetailedClass[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -365,11 +367,16 @@ export const useGoogleCalendarSync = () => {
   const currentClassIdsKey = useMemo(() => currentClassIds.join(','), [currentClassIds]);
 
   const currentClassFingerprint = useMemo(() => {
-    return enrolledClasses
+    const classFp = enrolledClasses
       .map(c => `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ''}:${c.building_shorthand || ''}`)
       .sort()
       .join('|');
-  }, [enrolledClasses]);
+    const holFp = holidays
+      .map(h => `${h.id}:${h.start_date}:${h.end_date}`)
+      .sort()
+      .join(';');
+    return `${classFp}#${holFp}`;
+  }, [enrolledClasses, holidays]);
 
   useEffect(() => {
     setAutoSyncAuthFailed(false);
@@ -490,10 +497,7 @@ export const useGoogleCalendarSync = () => {
 
           if (!edgeErr && edgeData?.in_sync) {
             const syncIds = classesToSync.map(c => c.id).filter((id): id is string => Boolean(id)).sort();
-            const syncFingerprint = edgeData.synced_fingerprint || classesToSync
-              .map(c => `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ''}:${c.building_shorthand || ''}`)
-              .sort()
-              .join('|');
+            const syncFingerprint = edgeData.synced_fingerprint || currentClassFingerprint;
 
             const newMetadata: SyncMetadata = {
               calendarId: edgeData.calendar_id || syncMetadata?.calendarId || DEFAULT_CALENDAR_TITLE,
@@ -579,10 +583,7 @@ export const useGoogleCalendarSync = () => {
       }
 
       const syncIds = classesToSync.map(c => c.id).filter((id): id is string => Boolean(id)).sort();
-      const syncFingerprint = classesToSync
-        .map(c => `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ''}:${c.building_shorthand || ''}`)
-        .sort()
-        .join('|');
+      const syncFingerprint = currentClassFingerprint;
 
       const newMetadata: SyncMetadata = {
         calendarId,
