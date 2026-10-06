@@ -6,12 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
-const getClassStudyYear = (cls: any) => {
-  if (cls.series_name && /^[1-9]/.test(cls.series_name)) {
-    return parseInt(cls.series_name.charAt(0), 10);
-  }
-  return null;
-};
 
 const getClassColorId = (classType: string) => {
   const type = (classType || "").toLowerCase();
@@ -417,33 +411,6 @@ const syncSingleUser = async (
   let manualClasses = (manualDataRes.data || []) as any[];
   const defaultClasses = (defaultDataRes.data || []) as any[];
 
-  const yearCounts: Record<number, number> = {};
-  for (const c of defaultClasses) {
-    if (c.series_name && /^[1-9]/.test(c.series_name)) {
-      const y = parseInt(c.series_name.charAt(0), 10);
-      yearCounts[y] = (yearCounts[y] || 0) + 1;
-    }
-  }
-
-  let activeYear: number | null = null;
-  let maxCount = 0;
-  for (const [yStr, count] of Object.entries(yearCounts)) {
-    if (count > maxCount) {
-      maxCount = count;
-      activeYear = parseInt(yStr, 10);
-    }
-  }
-
-  if (activeYear === null) {
-    activeYear = defaultClasses.map((c) => getClassStudyYear(c)).find((y) => y !== null) || null;
-  }
-
-  if (activeYear !== null) {
-    manualClasses = manualClasses.filter((c) => {
-      const cy = getClassStudyYear(c);
-      return cy === null || cy === activeYear;
-    });
-  }
 
   const conflictingDefaultIds = new Set<string>();
   for (const manual of manualClasses) {
