@@ -460,10 +460,15 @@ async function main() {
       }
 
       const classes = await resolveUserClasses(row.user_id, subgroupId);
-      const currentFingerprint = classes
+      const classFingerprint = classes
         .map(c => `${c.id}:${c.day_of_week}:${c.start_time}:${c.end_time}:${c.frequency}:${c.room_index || ''}:${c.building_shorthand || ''}`)
         .sort()
         .join('|');
+      const holidaysFingerprint = holidays
+        .map(h => `${h.id}:${h.start_date}:${h.end_date}`)
+        .sort()
+        .join(';');
+      const currentFingerprint = `${classFingerprint}#${holidaysFingerprint}`;
 
       const isChanged = !row.synced_fingerprint || row.synced_fingerprint !== currentFingerprint;
 
