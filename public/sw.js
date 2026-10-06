@@ -1,4 +1,4 @@
-const CACHE_NAME = 'timetable-v2';
+const CACHE_NAME = 'timetable-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -27,7 +27,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Always use Network-First for HTML navigation so users never get stuck on stale bundles
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -43,16 +42,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first with cache fallback for other assets
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
         if (networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
           const copy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
         return networkResponse;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

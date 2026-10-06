@@ -6,6 +6,8 @@ import { getStoredSelectionRaw } from '../../../utils/selectionStorage';
 
 const TIMETABLE_CACHE_PREFIX = 'timetable_cache_';
 const LATEST_CACHE_KEY = 'timetable_cache_latest';
+const TIMETABLE_CACHE_VERSION = 'v3';
+const TIMETABLE_VERSION_KEY = 'timetable_cache_version';
 
 type Class = Database['public']['Views']['detailed_classes']['Row'] & {
     shorthand: string | null;
@@ -33,6 +35,20 @@ const getCacheKey = (userId?: string | null, subgroupId?: string | null) => {
 };
 
 const getStoredCache = (userId?: string | null, subgroupId?: string | null): CachedData => {
+    try {
+        const storedVersion = localStorage.getItem(TIMETABLE_VERSION_KEY);
+        if (storedVersion !== TIMETABLE_CACHE_VERSION) {
+            localStorage.setItem(TIMETABLE_VERSION_KEY, TIMETABLE_CACHE_VERSION);
+            localStorage.removeItem(LATEST_CACHE_KEY);
+            localStorage.removeItem('cached_classes_default');
+            localStorage.removeItem('cached_hierarchy_default');
+            if (userId) localStorage.removeItem(`${TIMETABLE_CACHE_PREFIX}user_${userId}`);
+            if (subgroupId) localStorage.removeItem(`${TIMETABLE_CACHE_PREFIX}subgroup_${subgroupId}`);
+            return { classes: [], hierarchyString: '' };
+        }
+    } catch {
+    }
+
     const tryParse = (key: string): CachedData | null => {
         try {
             const raw = localStorage.getItem(key);
@@ -193,10 +209,16 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
             }
 
             if (user && !tempSubgroupId) {
-                if (!profile) {
-                    return;
+                if (profile?.subgroup_id) {
+                    targetSubgroupId = profile.subgroup_id;
+                } else {
+                    const { data: profData } = await supabase
+                        .from('profiles')
+                        .select('subgroup_id')
+                        .eq('id', user.id)
+                        .maybeSingle();
+                    targetSubgroupId = profData?.subgroup_id || null;
                 }
-                targetSubgroupId = profile.subgroup_id || null;
             }
 
             if (!targetSubgroupId) {
