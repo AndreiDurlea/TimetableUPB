@@ -209,7 +209,9 @@ export const useClassSearch = () => {
     .filter(cls => {
         if (!isProfileComplete) return false;
 
-        if (!searchOutsideSeries && userSeriesName) {
+        const isEnrolled = myClasses.some(c => c.id === cls.id) || (Boolean(cls.id) && manualEnrollments.includes(cls.id!));
+
+        if (!searchOutsideSeries && userSeriesName && !isEnrolled) {
             const userYear = parseInt(userSeriesName.charAt(0), 10);
             const classYear = getClassStudyYear(cls);
 

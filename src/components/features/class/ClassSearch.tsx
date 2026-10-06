@@ -124,6 +124,8 @@ const ClassSearch: React.FC = () => {
         const userYear = userSeriesName && /^[1-9]/.test(userSeriesName) ? parseInt(userSeriesName.charAt(0), 10) : null;
         const source = (!searchOutsideSeries && userSeriesName)
             ? allClasses.filter(c => {
+                const isEnrolled = myClasses.some(m => m.id === c.id) || (Boolean(c.id) && manualEnrollments.includes(c.id!));
+                if (isEnrolled) return true;
                 const cYear = getClassStudyYear(c);
                 if (cYear && userYear && cYear !== userYear) return false;
                 return c.series_name === userSeriesName || (!c.series_name && (!userFacultyId || c.resolved_faculty_id === userFacultyId));
@@ -208,7 +210,15 @@ const ClassSearch: React.FC = () => {
                         placeholder={isProfileComplete ? "Search for a class..." : "Complete your profile to search classes"}
                         disabled={!isProfileComplete}
                         suggestions={subjectSuggestions}
-                        onSelectSuggestion={(item) => setSearchTerm(item.name)}
+                        onSelectSuggestion={(item) => {
+                            setSearchTerm(item.name);
+                            if (!searchOutsideSeries && userSeriesName) {
+                                const match = allClasses.find(c => c.name === item.name || c.shorthand === item.shorthand);
+                                if (match && match.series_name && match.series_name !== userSeriesName) {
+                                    setSearchOutsideSeries(true);
+                                }
+                            }
+                        }}
                         onClear={() => setSearchTerm('')}
                     />
                     <SearchBadge disabled={!isProfileComplete} style={loading ? { visibility: 'hidden' } : undefined}>
