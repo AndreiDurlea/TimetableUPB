@@ -4,14 +4,16 @@ import DayCard from './DayCard';
 import styles from './DayCardGrid.module.css';
 import { useAuth } from '../../../hooks/auth/useAuth';
 import { useTimetableData } from '../../../hooks/features/timetable/useTimetableData';
+import { useAcademicCalendar } from '../../../hooks/features/timetable/useAcademicCalendar';
 import { useWeekLabels } from '../../../hooks/features/timetable/useWeekLabels';
-import { getSemesterWeek, isEvenWeek, getWeekLabel, SEMESTER_START } from '../../../utils/semesterUtils';
+import { getSemesterWeek, isEvenWeek, getWeekLabel } from '../../../utils/semesterUtils';
 import TimetableSelectionModal from './TimetableSelectionModal';
 import TimetableHeader from './TimetableHeader';
 import { getStoredSelectionRaw, getScoutSelectionRaw } from '../../../utils/selectionStorage';
 
 const DayCardGrid: React.FC = () => {
     const { user, loading } = useAuth();
+    const { getHoliday, semesterConfig, loading: calendarLoading } = useAcademicCalendar();
     const [activeDayIndex, setActiveDayIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
@@ -128,8 +130,8 @@ const DayCardGrid: React.FC = () => {
         const monday = new Date(today);
         monday.setDate(monday.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
 
-        if (monday < SEMESTER_START) {
-            monday.setTime(SEMESTER_START.getTime());
+        if (monday < semesterConfig.semesterStart) {
+            monday.setTime(semesterConfig.semesterStart.getTime());
         }
 
         for (let i = 0; i < 14; i++) {
@@ -311,15 +313,19 @@ const DayCardGrid: React.FC = () => {
 
         return weekDays.map((day, i) => {
             const index = startIndex + i;
-            const dayClasses = classes.filter(
-                (c) => {
-                    if (c.day_of_week !== day.getDay()) return false;
-                    const freq = c.frequency?.toLowerCase();
-                    if (!freq || freq === 'weekly') return true;
-                    const isEven = isEvenWeek(day);
-                    return (freq === 'even' && isEven) || (freq === 'odd' && !isEven);
-                }
-            );
+            const holiday = getHoliday(day);
+            const isHoliday = Boolean(holiday);
+            const dayClasses = isHoliday
+                ? []
+                : classes.filter(
+                    (c) => {
+                        if (c.day_of_week !== day.getDay()) return false;
+                        const freq = c.frequency?.toLowerCase();
+                        if (!freq || freq === 'weekly') return true;
+                        const isEven = isEvenWeek(day);
+                        return (freq === 'even' && isEven) || (freq === 'odd' && !isEven);
+                    }
+                );
             return (
                 <div
                     key={index}
@@ -337,7 +343,9 @@ const DayCardGrid: React.FC = () => {
                         date={day}
                         isActive={index === activeDayIndex}
                         classes={dayClasses}
-                        isLoading={classesLoading}
+                        isLoading={classesLoading || calendarLoading}
+                        isHoliday={isHoliday}
+                        holidayName={holiday?.name}
                     />
                 </div>
             );

@@ -127,3 +127,10 @@
   pointer-events: none;
   font-weight: bold;
 }
+
+.holidaySubtitle {
+  font-size: 0.55em;
+  font-weight: normal;
+  opacity: 0.8;
+  margin-top: 6px;
+}

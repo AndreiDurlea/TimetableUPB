@@ -111,7 +111,7 @@ const formatExDate = (d, timeStr) => {
   return `${y}${m}${day}T${cleanTime}00`;
 };
 
-const buildEventPayload = (cls) => {
+const buildEventPayload = (cls, holidays = []) => {
   if (!cls.id || !cls.day_of_week || !cls.start_time || !cls.end_time) {
     return null;
   }
@@ -150,23 +150,51 @@ const buildEventPayload = (cls) => {
     cls.frequency ? `Frecvență: ${cls.frequency}` : null,
   ].filter(Boolean);
 
+  const exDates = [];
+
+  const breakW1 = new Date(2026, 11, 21 + (dayOfWeek - 1));
+  const breakW2 = new Date(2026, 11, 28 + (dayOfWeek - 1));
+  const breakW3 = new Date(2027, 0, 4 + (dayOfWeek - 1));
+  if (!isBiweekly) {
+    exDates.push(formatExDate(breakW1, startTimeClean));
+    exDates.push(formatExDate(breakW2, startTimeClean));
+    exDates.push(formatExDate(breakW3, startTimeClean));
+  }
+
+  for (const h of holidays) {
+    if (!h.start_date || !h.end_date) continue;
+    const [sy, sm, sd] = h.start_date.split('-').map(Number);
+    const [ey, em, ed] = h.end_date.split('-').map(Number);
+    const start = new Date(sy, sm - 1, sd);
+    const end = new Date(ey, em - 1, ed);
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (cur.getDay() === dayOfWeek) {
+        if (!isBiweekly) {
+          exDates.push(formatExDate(cur, startTimeClean));
+        } else {
+          const semStart = new Date(2026, 8, 28);
+          const diffWeeks = Math.floor((cur.getTime() - semStart.getTime()) / (7 * 24 * 3600 * 1000));
+          const isEven = (diffWeeks + 1) % 2 === 0;
+          if ((isEvenFrequency && isEven) || (isOddFrequency && !isEven)) {
+            exDates.push(formatExDate(cur, startTimeClean));
+          }
+        }
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  const uniqueExDates = Array.from(new Set(exDates)).sort();
+  const exDateStr = uniqueExDates.join(',');
+
   let recurrence;
 
   if (!isBiweekly) {
-    const breakW1 = new Date(2026, 11, 21 + (dayOfWeek - 1));
-    const breakW2 = new Date(2026, 11, 28 + (dayOfWeek - 1));
-    const breakW3 = new Date(2027, 0, 4 + (dayOfWeek - 1));
-
-    const exDateStr = [
-      formatExDate(breakW1, startTimeClean),
-      formatExDate(breakW2, startTimeClean),
-      formatExDate(breakW3, startTimeClean),
-    ].join(',');
-
     recurrence = [
       'RRULE:FREQ=WEEKLY;UNTIL=20270123T000000Z',
-      `EXDATE;TZID=Europe/Bucharest:${exDateStr}`,
-    ];
+      exDateStr ? `EXDATE;TZID=Europe/Bucharest:${exDateStr}` : '',
+    ].filter(Boolean);
   } else if (isOddFrequency) {
     const week13Date = new Date(2027, 0, 11 + (dayOfWeek - 1));
     const rDateStr = formatExDate(week13Date, startTimeClean);
@@ -234,7 +262,7 @@ const hasEventChanged = (existing, payload) => {
   return false;
 };
 
-const diffSyncUserCalendar = async (token, calendarId, classes) => {
+const diffSyncUserCalendar = async (token, calendarId, classes, holidays = []) => {
   const existingEvents = await fetchCalendarEvents(token, calendarId);
 
   const existingMap = new Map();
@@ -269,7 +297,7 @@ const diffSyncUserCalendar = async (token, calendarId, classes) => {
 
   for (const cls of classes) {
     if (!cls.id) continue;
-    const payload = buildEventPayload(cls);
+    const payload = buildEventPayload(cls, holidays);
     if (!payload) continue;
 
     const eventId = existingMap.get(cls.id);
@@ -398,10 +426,14 @@ async function main() {
     query = query.eq('subgroup_id', targetSubgroupId);
   }
 
-  const { data: syncRows, error } = await query;
+  const [{ data: syncRows, error }, { data: holidaysData }] = await Promise.all([
+    query,
+    supabase.from('holidays').select('*'),
+  ]);
   if (error) {
     throw error;
   }
+  const holidays = holidaysData || [];
 
   console.log(`Found ${syncRows?.length || 0} user(s) with active refresh tokens.`);
 
@@ -443,7 +475,7 @@ async function main() {
       console.log(`User ${row.user_id}: Schedule change detected, syncing calendar ${row.calendar_id}...`);
       const accessToken = await refreshGoogleAccessToken(row.refresh_token);
 
-      await diffSyncUserCalendar(accessToken, row.calendar_id, classes);
+      await diffSyncUserCalendar(accessToken, row.calendar_id, classes, holidays);
 
       const classIds = classes.map(c => c.id).filter(Boolean).sort();
       await supabase
