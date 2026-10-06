@@ -244,6 +244,7 @@ export const initiateGoogleOAuth = async (returnQueryParam = 'sync_google=1'): P
       redirectTo: redirectUrl.toString(),
       queryParams: {
         access_type: 'offline',
+        prompt: 'consent',
       },
     },
   });
