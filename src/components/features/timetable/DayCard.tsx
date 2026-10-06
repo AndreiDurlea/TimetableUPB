@@ -18,9 +18,18 @@ interface DayCardProps {
   isActive: boolean;
   classes: DetailedClass[];
   isLoading: boolean;
+  isHoliday?: boolean;
+  holidayName?: string | null;
 }
 
-const DayCard: React.FC<DayCardProps> = ({ date, isActive, classes, isLoading }) => {
+const DayCard: React.FC<DayCardProps> = ({
+  date,
+  isActive,
+  classes,
+  isLoading,
+  isHoliday = false,
+  holidayName = null,
+}) => {
   const day = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
   const fullDayName = date.toLocaleDateString('en-US', { weekday: 'long' });
   const dayNumber = date.getDate();
@@ -58,8 +67,17 @@ const DayCard: React.FC<DayCardProps> = ({ date, isActive, classes, isLoading })
               {isLoading ? (
                 <div className={styles.noCoursesMessage} style={{ visibility: 'hidden' }} />
               ) : classes.length === 0 ? (
-                <div className={styles.noCoursesMessage}>
-                  No courses on {fullDayName}
+                <div className={styles.noCoursesMessage} title={holidayName || undefined}>
+                  {isHoliday ? (
+                    <>
+                      <div>Holiday</div>
+                      {holidayName && holidayName.toLowerCase() !== 'holiday' && (
+                        <div className={styles.holidaySubtitle}>{holidayName}</div>
+                      )}
+                    </>
+                  ) : (
+                    `No courses on ${fullDayName}`
+                  )}
                 </div>
               ) : (
                 classes.map(c => {
