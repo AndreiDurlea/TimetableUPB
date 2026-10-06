@@ -30,11 +30,7 @@ const Footer: React.FC = () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        scopes: 'https://www.googleapis.com/auth/calendar',
         redirectTo: `${window.location.origin}/profile`,
-        queryParams: {
-          access_type: 'offline',
-        },
       },
     });
   };
