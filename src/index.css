@@ -72,18 +72,18 @@ html, body {
 }
 
 [data-theme="light"] {
-  --background-color: #dedede;
-  --text-color: #111827;
-  --text-light: #111827;
-  --text-dark: #111827;
-  --text-light-secondary: rgba(0, 0, 0, 0.6);
-  --primary-accent: #111827;
-  --navbar-bg: rgba(222, 222, 222, 0.85);
+  --background-color: #ffffff;
+  --text-color: #0f172a;
+  --text-light: #0f172a;
+  --text-dark: #0f172a;
+  --text-light-secondary: #475569;
+  --primary-accent: #84cc16;
+  --navbar-bg: rgba(255, 255, 255, 0.85);
   --card-bg-default: #ffffff;
-  --card-text: #111827;
-  --card-border-line: rgba(0, 0, 0, 0.12);
+  --card-text: #0f172a;
+  --card-border-line: rgba(0, 0, 0, 0.15);
   --card-grid-line: rgba(0, 0, 0, 0.08);
-  --overlay-bg: rgba(222, 222, 222, 0.75);
+  --overlay-bg: rgba(255, 255, 255, 0.85);
   --color-scheme: light;
 }
 
@@ -123,6 +123,17 @@ body::-webkit-scrollbar {
 
 .gray-button:hover {
   background-color: #e0e0e0;
+}
+
+[data-theme="light"] .gray-button {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  color: #0f172a;
+}
+
+[data-theme="light"] .gray-button:hover {
+  background-color: #f9fafb;
+  border-color: rgba(0, 0, 0, 0.35);
 }
 
 .no-scrollbar::-webkit-scrollbar {

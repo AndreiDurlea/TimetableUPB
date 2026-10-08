@@ -49,6 +49,11 @@
   opacity: 1;
 }
 
+:global([data-theme="light"]) .dayCard {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+}
+
 .timetableGrid {
   display: flex;
   flex: 1;

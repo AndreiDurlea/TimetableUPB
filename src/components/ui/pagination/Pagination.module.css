@@ -78,9 +78,20 @@
   font-weight: 700;
 }
 
+:global([data-theme="light"]) .pageButton {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+:global([data-theme="light"]) .pageButton:hover:not(:disabled) {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
 :global([data-theme="light"]) .activePage {
   background: #000000;
   color: #ffffff;
+  border: 1px solid #000000;
 }
 
 .ellipsis {

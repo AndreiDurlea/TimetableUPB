@@ -8,4 +8,17 @@
   border-bottom-right-radius: 10px;
   overflow: hidden;
   white-space: nowrap;
+  background-color: #ffffff;
+  color: #000000;
+  transition: all 0.3s ease;
+}
+
+:global([data-theme="light"]) .enrolledBar {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.removedBar {
+  background-color: #555555 !important;
+  color: #ffffff !important;
 }

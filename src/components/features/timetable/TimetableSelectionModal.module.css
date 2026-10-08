@@ -16,7 +16,7 @@
 }
 
 [data-theme="light"] .overlay {
-  background-color: var(--overlay-bg, rgba(222, 222, 222, 0.75));
+  background-color: var(--overlay-bg, rgba(255, 255, 255, 0.85));
 }
 
 .modalContent {
@@ -59,4 +59,15 @@
 
 .modalButton:hover {
   background-color: #f5f5f5;
+}
+
+[data-theme="light"] .modalButton {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+[data-theme="light"] .modalButton:hover {
+  background-color: #f9fafb;
+  border-color: rgba(0, 0, 0, 0.35);
 }

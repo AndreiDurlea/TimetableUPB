@@ -66,3 +66,35 @@
 .suggestionItem:hover {
   background-color: #f0f0f0;
 }
+
+[data-theme="light"] .input {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+[data-theme="light"] .input:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"] .input:disabled {
+  background-color: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #94a3b8;
+  opacity: 0.6;
+}
+
+[data-theme="light"] .suggestionsList {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: none;
+}
+
+[data-theme="light"] .suggestionItem {
+  color: #0f172a;
+}
+
+[data-theme="light"] .suggestionItem:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}

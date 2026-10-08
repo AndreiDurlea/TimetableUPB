@@ -27,8 +27,8 @@
 
 [data-theme="light"] .formField {
   background-color: #ffffff;
-  color: #111827;
-  border-color: #d1d5db;
+  color: #0f172a;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .formField:focus, .formField:focus-within {
@@ -47,6 +47,7 @@
 }
 
 [data-theme="light"] .formField:disabled {
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  background-color: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #94a3b8;
 }

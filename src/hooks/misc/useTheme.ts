@@ -12,9 +12,9 @@ export const useTheme = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.style.colorScheme = theme;
-    document.documentElement.style.backgroundColor = theme === 'light' ? '#dedede' : '#000000';
-    document.body.style.backgroundColor = theme === 'light' ? '#dedede' : '#000000';
-    document.body.style.color = theme === 'light' ? '#111827' : 'rgba(255, 255, 255, 0.87)';
+    document.documentElement.style.backgroundColor = theme === 'light' ? '#ffffff' : '#000000';
+    document.body.style.backgroundColor = theme === 'light' ? '#ffffff' : '#000000';
+    document.body.style.color = theme === 'light' ? '#0f172a' : 'rgba(255, 255, 255, 0.87)';
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
