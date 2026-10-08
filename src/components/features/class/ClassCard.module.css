@@ -12,12 +12,20 @@
   max-width: 320px;
   position: relative;
   cursor: pointer;
-  transition: border 0.2s;
-  border: 2px solid transparent;
+  border: 1px solid var(--card-border-line, rgba(255, 255, 255, 0.1));
   overflow: hidden;
   flex-grow: 0;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
+}
+
+[data-theme="light"] .classCard {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+}
+
+[data-theme="light"] .classCard:hover {
+  border-color: rgba(0, 0, 0, 0.35);
 }
 
 .enrolled {
@@ -53,13 +61,13 @@
   z-index: 100;
   width: 90%;
   text-align: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
   pointer-events: none;
 }
 
 [data-theme="light"] .conflictTooltip {
-  background-color: #e5e7eb;
+  background-color: #ffffff;
   color: #111827;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .cardRow {
@@ -98,4 +106,3 @@
 [data-theme="light"] .textSmall {
   color: #6b7280;
 }
-

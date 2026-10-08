@@ -30,6 +30,17 @@
   opacity: 0.7;
 }
 
+:global([data-theme="light"]) .searchInput {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+:global([data-theme="light"]) .searchInput:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.45);
+}
+
 .searchIcon {
   position: absolute;
   left: 12px;
@@ -87,8 +98,8 @@
 
 :global([data-theme="light"]) .suggestionsDropdown {
   background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 .suggestionItem {

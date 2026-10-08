@@ -67,10 +67,20 @@
 .seriesFilterLabel {
     font-size: 0.9em;
     user-select: none;
+    color: var(--text-color, #ffffff);
+}
+
+:global([data-theme="light"]) .seriesFilterLabel {
+    color: #111827;
 }
 
 .typeFilterContainer {
     font-size: 0.9em;
+    color: var(--text-color, #ffffff);
+}
+
+:global([data-theme="light"]) .typeFilterContainer {
+    color: #111827;
 }
 
 .filterOption {
@@ -78,6 +88,10 @@
     text-decoration: underline;
     color: #a9a9a9;
     transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+:global([data-theme="light"]) .filterOption {
+    color: #4b5563;
 }
 
 .filterOption:hover {

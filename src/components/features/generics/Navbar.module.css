@@ -95,14 +95,13 @@
 
 :global([data-theme="light"]) .grayButton {
     background-color: #ffffff;
-    color: #111827;
-    border: 1px solid #d1d5db;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: #0f172a;
+    border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 :global([data-theme="light"]) .grayButton:hover {
     background-color: #f9fafb;
-    border-color: #9ca3af;
+    border-color: rgba(0, 0, 0, 0.35);
 }
 
 .leftContainer {
