@@ -9,15 +9,10 @@ interface EnrolledBarProps {
 }
 
 const EnrolledBar: React.FC<EnrolledBarProps> = ({ showSplitBar, isRemoved, isLoading }) => {
-  const style: React.CSSProperties = {
-    width: showSplitBar ? '40%' : '0%',
-    backgroundColor: isRemoved ? '#555' : 'white',
-    color: isRemoved ? 'white' : 'black',
-    transition: 'all 0.3s ease',
-  };
+  const barClass = `${styles.enrolledBar} ${isRemoved ? styles.removedBar : ''}`;
 
   return (
-    <div className={styles.enrolledBar} style={style}>
+    <div className={barClass} style={{ width: showSplitBar ? '40%' : '0%' }}>
       {isRemoved
         ? 'Removed'
         : showSplitBar &&
