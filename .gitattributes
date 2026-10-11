@@ -1,3 +1,7 @@
-AGENTS.md filter=corecontext
-CLAUDE.md filter=corecontext
-GEMINI.md filter=corecontext
+/AGENTS.md filter=corecontext
+/CLAUDE.md filter=corecontext
+/GEMINI.md filter=corecontext
+/.cursorrules filter=corecontext
+/.windsurfrules filter=corecontext
+/COPILOT.md filter=corecontext
+/CODEX.md filter=corecontext
