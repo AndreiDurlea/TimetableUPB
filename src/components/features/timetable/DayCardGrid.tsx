@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DayCard from './DayCard';
 import styles from './DayCardGrid.module.css';
 import { useAuth } from '../../../hooks/auth/useAuth';
-import { useTimetableData } from '../../../hooks/features/timetable/useTimetableData';
+import { useTimetableData, type SharedUserProfileData } from '../../../hooks/features/timetable/useTimetableData';
 import { useAcademicCalendar } from '../../../hooks/features/timetable/useAcademicCalendar';
 import { useWeekLabels } from '../../../hooks/features/timetable/useWeekLabels';
 import { getSemesterWeek, isEvenWeek, getWeekLabel } from '../../../utils/semesterUtils';
 import TimetableSelectionModal from './TimetableSelectionModal';
 import TimetableHeader from './TimetableHeader';
 import { getStoredSelectionRaw, getScoutSelectionRaw } from '../../../utils/selectionStorage';
+import { supabase } from '../../../lib/supabase';
 
 const DayCardGrid: React.FC = () => {
     const { user, loading } = useAuth();
+    const { hierarchy } = useParams<{ hierarchy?: string }>();
     const { getHoliday, semesterConfig, loading: calendarLoading } = useAcademicCalendar();
     const [activeDayIndex, setActiveDayIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -38,13 +40,145 @@ const DayCardGrid: React.FC = () => {
         activeDayIndexRef.current = activeDayIndex;
     }, [activeDayIndex]);
 
+    const [sharedUser, setSharedUser] = useState<SharedUserProfileData | null>(null);
+    const [sharedSubgroupId, setSharedSubgroupId] = useState<string | null>(null);
+    const [isResolvingShare, setIsResolvingShare] = useState<boolean>(Boolean(hierarchy));
+
     const [showModal, setShowModal] = useState(false);
     const [tempSubgroupId, setTempSubgroupId] = useState<string | null>(null);
     const [isSelectionForced, setIsSelectionForced] = useState(false);
     const authInitializedRef = useRef(false);
     const prevUserRef = useRef<any>(undefined);
-    
-    const { classes, classesLoading, hierarchyString } = useTimetableData(tempSubgroupId);
+
+    useEffect(() => {
+        if (!hierarchy) {
+            setSharedUser(null);
+            setSharedSubgroupId(null);
+            setIsResolvingShare(false);
+            return;
+        }
+
+        let isCancelled = false;
+        setIsResolvingShare(true);
+
+        const resolveShare = async () => {
+            const cleanHierarchy = hierarchy.trim();
+            const parts = cleanHierarchy.split('-');
+            if (parts.length === 4) {
+                const [faculty, domain, series, groupSubgroup] = parts;
+                const groupMatch = groupSubgroup.match(/^(\d+)([a-zA-Z]+)$/);
+                if (groupMatch) {
+                    const group = groupMatch[1];
+                    const subgroup = groupMatch[2];
+                    const { data, error } = await supabase.rpc('get_subgroup_id_from_hierarchy', {
+                        p_faculty_shorthand: faculty,
+                        p_domain_name: domain,
+                        p_series_name: series,
+                        p_group_name: group,
+                        p_subgroup_name: subgroup,
+                    });
+                    const typedData = data as { subgroup_id: string }[] | null;
+                    if (!isCancelled && !error && typedData && typedData.length > 0 && typedData[0].subgroup_id) {
+                        setSharedSubgroupId(typedData[0].subgroup_id);
+                        setSharedUser(null);
+                        setIsResolvingShare(false);
+                        return;
+                    }
+                }
+            }
+
+            try {
+                const { data: sharedData, error: sharedError } = await supabase.rpc('get_shared_profile', {
+                    p_slug: cleanHierarchy,
+                });
+
+                if (!isCancelled && !sharedError && sharedData && typeof sharedData === 'object') {
+                    const payload = sharedData as unknown as SharedUserProfileData;
+                    if (payload.user_id) {
+                        setSharedUser(payload);
+                        setSharedSubgroupId(null);
+                        setIsResolvingShare(false);
+                        return;
+                    }
+                }
+            } catch (err) {
+                void err;
+            }
+
+            try {
+                const { data: profData } = await supabase
+                    .from('profiles')
+                    .select('id, subgroup_id, is_shared, share_slug, share_code')
+                    .or(`share_slug.ilike.${cleanHierarchy},share_code.ilike.${cleanHierarchy}`)
+                    .maybeSingle();
+
+                if (!isCancelled && profData && profData.subgroup_id && (profData.is_shared || (user && user.id === profData.id))) {
+                    const [manualRes, removedRes, hierRes] = await Promise.all([
+                        supabase.from('user_classes').select('class_id').eq('user_id', profData.id),
+                        supabase.from('user_removed_classes').select('class_id').eq('user_id', profData.id),
+                        supabase
+                            .from('subgroups')
+                            .select('name, groups (name, series (name, domains (name, faculties (shorthand))))')
+                            .eq('id', profData.subgroup_id)
+                            .maybeSingle(),
+                    ]);
+
+                    let hierarchyStr = '';
+                    const hData = hierRes.data as any;
+                    if (hData) {
+                        const facultyShorthand = hData.groups?.series?.domains?.faculties?.shorthand;
+                        const domainName = hData.groups?.series?.domains?.name;
+                        const seriesName = hData.groups?.series?.name;
+                        const groupName = hData.groups?.name;
+                        const subgroupName = hData.name;
+                        if (facultyShorthand && domainName && seriesName && groupName && subgroupName) {
+                            hierarchyStr = `${facultyShorthand}-${domainName}-${seriesName}-${groupName}${subgroupName}`;
+                        }
+                    }
+
+                    const manualIds = manualRes.data?.map((r) => r.class_id).filter(Boolean) || [];
+                    const removedIds = removedRes.data?.map((r) => r.class_id).filter(Boolean) || [];
+                    const nameParts = cleanHierarchy.split('-');
+                    const cleanName = nameParts.length > 1
+                        ? nameParts.slice(0, -1).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                        : 'User';
+
+                    setSharedUser({
+                        user_id: profData.id,
+                        user_name: cleanName,
+                        subgroup_id: profData.subgroup_id,
+                        hierarchy: hierarchyStr,
+                        share_slug: profData.share_slug || undefined,
+                        share_code: profData.share_code || undefined,
+                        manual_class_ids: manualIds,
+                        removed_class_ids: removedIds,
+                    });
+                    setSharedSubgroupId(null);
+                    setIsResolvingShare(false);
+                    return;
+                }
+            } catch (err) {
+                void err;
+            }
+
+            if (!isCancelled) {
+                setIsResolvingShare(false);
+                navigate('/404', { replace: true });
+            }
+        };
+
+        void resolveShare();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [hierarchy, navigate]);
+
+    const activeSubgroupId = hierarchy ? sharedSubgroupId : tempSubgroupId;
+    const activeSharedUser = hierarchy ? sharedUser : null;
+    const isPaused = Boolean(hierarchy && !sharedUser && !sharedSubgroupId);
+
+    const { classes, classesLoading, hierarchyString } = useTimetableData(activeSubgroupId, activeSharedUser, isPaused);
     useWeekLabels(gridRef, containerRef, separatorRef, label1Ref, label2Ref, gridElement);
 
     useEffect(() => {
@@ -55,7 +189,7 @@ const DayCardGrid: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (loading) return;
+        if (loading || hierarchy) return;
 
         let savedSubgroupId: string | null = null;
         try {
@@ -68,14 +202,6 @@ const DayCardGrid: React.FC = () => {
             }
         } catch {
             savedSubgroupId = null;
-        }
-
-        const fromShare = sessionStorage.getItem('fromShare') === 'true';
-        if (fromShare) {
-            sessionStorage.removeItem('fromShare');
-            setTempSubgroupId(savedSubgroupId);
-            prevUserRef.current = user;
-            return;
         }
 
         const userChanged = prevUserRef.current !== undefined && prevUserRef.current !== user;
@@ -98,7 +224,7 @@ const DayCardGrid: React.FC = () => {
                 }
             }
         }
-    }, [user, loading, navigate]);
+    }, [user, loading, hierarchy]);
 
     useEffect(() => {
         if (showModal) {
@@ -295,9 +421,13 @@ const DayCardGrid: React.FC = () => {
             }
         }
         if (subgroupId) {
+            setSharedUser(null);
             setTempSubgroupId(subgroupId);
             setShowModal(false);
             setIsSelectionForced(false);
+            if (hierarchy) {
+                navigate('/');
+            }
             window.dispatchEvent(new Event('profile_selection_changed'));
         }
     };
@@ -343,7 +473,7 @@ const DayCardGrid: React.FC = () => {
                         date={day}
                         isActive={index === activeDayIndex}
                         classes={dayClasses}
-                        isLoading={classesLoading || calendarLoading}
+                        isLoading={classesLoading || calendarLoading || isResolvingShare}
                         isHoliday={isHoliday}
                         holidayName={holiday?.name}
                     />
@@ -355,7 +485,7 @@ const DayCardGrid: React.FC = () => {
     const label1 = week1.length > 0 ? getWeekLabel(getSemesterWeek(week1[0]), week1[0]) : '';
     const label2 = week2.length > 0 ? getWeekLabel(getSemesterWeek(week2[0]), week2[0]) : '';
 
-    if (isSelectionForced && !tempSubgroupId) {
+    if (isSelectionForced && !activeSubgroupId && !activeSharedUser && !hierarchy) {
         return (
             <TimetableSelectionModal
                 show={true}
@@ -370,11 +500,32 @@ const DayCardGrid: React.FC = () => {
         <>
             <TimetableHeader
                 user={user}
-                tempSubgroupId={tempSubgroupId}
+                tempSubgroupId={activeSubgroupId}
                 hierarchyString={hierarchyString}
-                onSwitchToUserTimetable={() => setTempSubgroupId(null)}
-                onShowTimetableSwitcher={() => setShowModal(true)}
-                loading={loading || (Boolean(tempSubgroupId) && !hierarchyString)}
+                sharedUser={activeSharedUser}
+                onClearSharedUser={() => {
+                    if (hierarchy) {
+                        navigate('/');
+                    } else {
+                        setSharedUser(null);
+                    }
+                }}
+                onSwitchToUserTimetable={() => {
+                    if (hierarchy) {
+                        navigate('/');
+                    } else {
+                        setTempSubgroupId(null);
+                        setSharedUser(null);
+                    }
+                }}
+                onShowTimetableSwitcher={() => {
+                    if (hierarchy) {
+                        navigate('/');
+                    } else {
+                        setShowModal(true);
+                    }
+                }}
+                loading={isResolvingShare || loading || (Boolean(activeSubgroupId || activeSharedUser) && !hierarchyString && classesLoading)}
             />
 
             <TimetableSelectionModal

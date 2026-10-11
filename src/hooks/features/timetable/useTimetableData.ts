@@ -148,16 +148,31 @@ const areClassesDifferent = (current: Class[], remote: Class[]): boolean => {
     return false;
 };
 
-export const useTimetableData = (tempSubgroupId: string | null) => {
+export type SharedUserProfileData = {
+    user_id: string;
+    user_name: string;
+    subgroup_id: string;
+    hierarchy?: string;
+    share_slug?: string;
+    share_code?: string;
+    manual_class_ids?: string[];
+    removed_class_ids?: string[];
+};
+
+export const useTimetableData = (
+    tempSubgroupId: string | null,
+    sharedUserProfile?: SharedUserProfileData | null,
+    isPaused: boolean = false
+) => {
     const { user, profile, loading: authLoading, refreshTrigger } = useAuth();
 
     const initialCache = useRef<CachedData | null>(null);
     if (!initialCache.current) {
-        initialCache.current = getStoredCache(user?.id, tempSubgroupId || profile?.subgroup_id);
+        initialCache.current = isPaused ? { classes: [], hierarchyString: '' } : getStoredCache(user?.id, tempSubgroupId || profile?.subgroup_id);
     }
 
     const [classes, setClasses] = useState<Class[]>(() => initialCache.current!.classes);
-    const [classesLoading, setClassesLoading] = useState<boolean>(() => initialCache.current!.classes.length === 0);
+    const [classesLoading, setClassesLoading] = useState<boolean>(() => isPaused || initialCache.current!.classes.length === 0);
     const [hierarchyString, setHierarchyString] = useState<string>(() => initialCache.current!.hierarchyString);
 
     const classesRef = useRef<Class[]>(classes);
@@ -167,7 +182,16 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
     hierarchyRef.current = hierarchyString;
 
     useEffect(() => {
-        if (tempSubgroupId) {
+        if (isPaused) {
+            setClasses([]);
+            setHierarchyString('');
+            setClassesLoading(true);
+            return;
+        }
+
+        if (sharedUserProfile) {
+            setClassesLoading(true);
+        } else if (tempSubgroupId) {
             const cached = getStoredCache(null, tempSubgroupId);
             if (cached && cached.classes.length > 0) {
                 setClasses(cached.classes);
@@ -184,17 +208,20 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
                 setClassesLoading(false);
             }
         }
-    }, [tempSubgroupId, user, profile?.subgroup_id]);
+    }, [tempSubgroupId, user, profile?.subgroup_id, sharedUserProfile, isPaused]);
 
     useEffect(() => {
         let isCancelled = false;
 
         const checkRemote = async () => {
-            if (authLoading && !tempSubgroupId) {
+            if (isPaused) {
+                return;
+            }
+            if (authLoading && !tempSubgroupId && !sharedUserProfile) {
                 return;
             }
 
-            let targetSubgroupId = tempSubgroupId;
+            let targetSubgroupId = sharedUserProfile?.subgroup_id || tempSubgroupId;
 
             if (!user && !targetSubgroupId) {
                 const savedSelectionRaw = getStoredSelectionRaw();
@@ -208,7 +235,7 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
                 }
             }
 
-            if (user && !tempSubgroupId) {
+            if (user && !tempSubgroupId && !sharedUserProfile) {
                 if (profile?.subgroup_id) {
                     targetSubgroupId = profile.subgroup_id;
                 } else {
@@ -242,7 +269,56 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
                     return;
                 }
 
-                let classIds = (relevantClasses || []).map((c: RelevantClass) => c.id);
+                const classIds = (relevantClasses || []).map((c: RelevantClass) => c.id);
+
+                if (sharedUserProfile) {
+                    let defaultClasses: Class[] = [];
+                    if (classIds.length > 0) {
+                        const { data: defaultData } = await supabase.from('detailed_classes').select('*').in('id', classIds);
+                        if (defaultData) defaultClasses = defaultData as Class[];
+                    }
+
+                    let manualClasses: Class[] = [];
+                    const manualIds = sharedUserProfile.manual_class_ids || [];
+                    const removedIds = sharedUserProfile.removed_class_ids || [];
+
+                    if (manualIds.length > 0) {
+                        const { data: manualData } = await supabase.from('detailed_classes').select('*').in('id', manualIds);
+                        if (manualData) manualClasses = manualData as Class[];
+                    }
+
+                    const conflictingDefaultIds = new Set<string>();
+                    for (const manual of manualClasses) {
+                        if (!manual.start_time || !manual.end_time || !manual.day_of_week) continue;
+                        const manualStart = new Date(`1970-01-01T${manual.start_time}`);
+                        const manualEnd = new Date(`1970-01-01T${manual.end_time}`);
+
+                        for (const def of defaultClasses) {
+                            if (!def.start_time || !def.end_time || def.day_of_week !== manual.day_of_week) continue;
+                            const defStart = new Date(`1970-01-01T${def.start_time}`);
+                            const defEnd = new Date(`1970-01-01T${def.end_time}`);
+
+                            if (manualStart < defEnd && manualEnd > defStart) {
+                                const freq1 = manual.frequency;
+                                const freq2 = def.frequency;
+                                if (freq1 === 'weekly' || freq2 === 'weekly' || freq1 === freq2) {
+                                    conflictingDefaultIds.add(def.id!);
+                                }
+                            }
+                        }
+                    }
+
+                    const finalDefaults = defaultClasses.filter(c => c.id && !removedIds.includes(c.id) && !conflictingDefaultIds.has(c.id));
+                    const remoteClasses = [...finalDefaults, ...manualClasses];
+
+                    if (isCancelled) return;
+                    setClasses(remoteClasses);
+                    if (sharedUserProfile.hierarchy) {
+                        setHierarchyString(sharedUserProfile.hierarchy);
+                    }
+                    setClassesLoading(false);
+                    return;
+                }
 
                 if (user && !tempSubgroupId) {
                     const [manualRes, removedRes] = await Promise.all([
@@ -386,7 +462,7 @@ export const useTimetableData = (tempSubgroupId: string | null) => {
         return () => {
             isCancelled = true;
         };
-    }, [user, profile, tempSubgroupId, refreshTrigger, authLoading]);
+    }, [user, profile, tempSubgroupId, sharedUserProfile, refreshTrigger, authLoading, isPaused]);
 
     return { classes, classesLoading, hierarchyString };
 };

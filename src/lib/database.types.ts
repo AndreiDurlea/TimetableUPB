@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -305,16 +305,25 @@ export type Database = {
           id: string
           is_admin: boolean | null
           subgroup_id: string | null
+          is_shared: boolean | null
+          share_slug: string | null
+          share_code: string | null
         }
         Insert: {
           id: string
           is_admin?: boolean | null
           subgroup_id?: string | null
+          is_shared?: boolean | null
+          share_slug?: string | null
+          share_code?: string | null
         }
         Update: {
           id?: string
           is_admin?: boolean | null
           subgroup_id?: string | null
+          is_shared?: boolean | null
+          share_slug?: string | null
+          share_code?: string | null
         }
         Relationships: [
           {
@@ -669,6 +678,20 @@ export type Database = {
           series_id: string
           subgroup_id: string
         }[]
+      }
+      get_shared_profile: {
+        Args: {
+          p_slug: string
+        }
+        Returns: Json
+      }
+      set_profile_sharing: {
+        Args: {
+          p_is_shared: boolean
+          p_share_slug: string
+          p_share_code: string
+        }
+        Returns: Json
       }
     }
     Enums: {

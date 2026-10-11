@@ -8,6 +8,8 @@ interface TimetableHeaderProps {
   onSwitchToUserTimetable: () => void;
   onShowTimetableSwitcher: () => void;
   loading?: boolean;
+  sharedUser?: { user_name: string } | null;
+  onClearSharedUser?: () => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -17,10 +19,19 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   onSwitchToUserTimetable,
   onShowTimetableSwitcher,
   loading = false,
+  sharedUser,
+  onClearSharedUser,
 }) => {
   return (
     <div className={styles.headerText} style={loading ? { visibility: 'hidden' } : undefined}>
-      {user ? (
+      {sharedUser ? (
+        <>
+          Displaying {sharedUser.user_name}'s timetable.{' '}
+          <span className={styles.clickableText} onClick={onClearSharedUser || onSwitchToUserTimetable}>
+            {user ? 'Display yours instead.' : 'See others\' timetables.'}
+          </span>
+        </>
+      ) : user ? (
         tempSubgroupId ? (
           <>
             Displaying timetable for {hierarchyString}. <span className={styles.clickableText} onClick={onSwitchToUserTimetable}>Display yours instead.</span>
